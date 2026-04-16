@@ -2,26 +2,15 @@
   <div class="antialiased font-sans">
     <Login v-if="!session" />
 
-    <div v-else class="min-h-screen bg-white">
-      <header class="border-b border-gray-100 px-8 py-4 flex justify-between items-center bg-white sticky top-0 z-40">
-        <div class="flex items-center gap-4">
-          <span class="font-black text-lg tracking-tighter text-black">SIINGE CRM</span>
-          <span class="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-bold rounded border border-green-100">LIVE</span>
-        </div>
-        
-        <div class="flex items-center gap-6">
-          <span class="text-[11px] font-bold text-gray-400 uppercase tracking-widest hidden sm:block">
-            {{ session.user.email }}
-          </span>
-          <button @click="handleSignOut" class="text-[11px] font-bold text-red-500 hover:text-red-700 uppercase tracking-widest transition-colors">
-            Sign Out
-          </button>
-        </div>
-      </header>
-
-      <main>
-        <ClientsView /> 
-      </main>
+    <div v-else>
+      <router-view />
+      
+      <button 
+        @click="handleSignOut" 
+        class="fixed bottom-4 left-4 z-50 bg-black text-white text-[10px] font-bold px-3 py-1.5 rounded-lg opacity-50 hover:opacity-100 transition-opacity uppercase tracking-widest"
+      >
+        Sign Out
+      </button>
     </div>
   </div>
 </template>
@@ -29,18 +18,17 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { supabase } from './lib/supabaseClient'
-
-// IMPORTACIONES CORREGIDAS SEGÚN TU IMAGEN:
-import Login from './components/Login.vue' 
-import ClientsView from './views/Clients.vue' 
+import Login from './components/Login.vue'
 
 const session = ref(null)
 
 onMounted(() => {
+  // Verificamos sesión actual
   supabase.auth.getSession().then(({ data }) => {
     session.value = data.session
   })
 
+  // Escuchamos cambios de auth
   supabase.auth.onAuthStateChange((_event, _session) => {
     session.value = _session
   })
