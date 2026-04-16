@@ -5,13 +5,13 @@
     <div v-else class="min-h-screen bg-white">
       <header class="border-b border-gray-100 px-8 py-4 flex justify-between items-center bg-white sticky top-0 z-40">
         <div class="flex items-center gap-4">
-          <span class="font-black text-lg tracking-tighter">SIINGE CRM</span>
+          <span class="font-black text-lg tracking-tighter text-black">SIINGE CRM</span>
           <span class="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-bold rounded border border-green-100">LIVE</span>
         </div>
         
         <div class="flex items-center gap-6">
           <span class="text-[11px] font-bold text-gray-400 uppercase tracking-widest hidden sm:block">
-            Logged as: {{ session.user.email }}
+            {{ session.user.email }}
           </span>
           <button @click="handleSignOut" class="text-[11px] font-bold text-red-500 hover:text-red-700 uppercase tracking-widest transition-colors">
             Sign Out
@@ -20,7 +20,7 @@
       </header>
 
       <main>
-        <ClientDashboard /> 
+        <ClientsView /> 
       </main>
     </div>
   </div>
@@ -29,18 +29,18 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { supabase } from './lib/supabaseClient'
-import Login from './components/Login.vue'
-import ClientDashboard from './components/ClientDashboard.vue' // Asegúrate de que el nombre coincida con tu archivo de la tabla
+
+// IMPORTACIONES CORREGIDAS SEGÚN TU IMAGEN:
+import Login from './components/Login.vue' 
+import ClientsView from './views/Clients.vue' 
 
 const session = ref(null)
 
 onMounted(() => {
-  // 1. Revisar si ya hay una sesión al cargar
   supabase.auth.getSession().then(({ data }) => {
     session.value = data.session
   })
 
-  // 2. Escuchar cambios (login/logout)
   supabase.auth.onAuthStateChange((_event, _session) => {
     session.value = _session
   })
