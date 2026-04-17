@@ -187,13 +187,12 @@
                 </span>
               </div>
 
-              <div class="space-y-4">
+              <div class="space-y-5">
                 <div>
                   <label class="block text-[11px] font-bold text-gray-500 uppercase mb-1.5">Deliverables (Section 2)</label>
                   <textarea 
                     v-model="project.client.sow_deliverables" 
-                    rows="3" 
-                    placeholder="E.g. 1. Custom Discord Bot&#10;2. Web Dashboard..."
+                    rows="6" 
                     class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none leading-relaxed"
                   ></textarea>
                 </div>
@@ -202,8 +201,7 @@
                   <label class="block text-[11px] font-bold text-gray-500 uppercase mb-1.5">Timeline & Milestones (Section 3)</label>
                   <textarea 
                     v-model="project.client.sow_timeline" 
-                    rows="3" 
-                    placeholder="E.g. Phase 1 Delivery: 2 weeks from signing..."
+                    rows="5" 
                     class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none leading-relaxed"
                   ></textarea>
                 </div>
@@ -212,8 +210,7 @@
                   <label class="block text-[11px] font-bold text-gray-500 uppercase mb-1.5">Fees & Payment (Section 5)</label>
                   <textarea 
                     v-model="project.client.sow_fees_payment" 
-                    rows="3" 
-                    placeholder="E.g. Total fee: $5,000. 50% upfront, 50% on completion."
+                    rows="7" 
                     class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none leading-relaxed"
                   ></textarea>
                 </div>
@@ -287,12 +284,12 @@
           <div>
             <label class="block text-[11px] font-bold text-gray-500 uppercase mb-1 flex justify-between">
               <span>Message Body (HTML Format)</span>
-              <span class="text-blue-500 normal-case">Links are styled as buttons</span>
+              <span class="text-blue-500 normal-case font-medium">Links are styled as buttons</span>
             </label>
             <textarea 
               v-model="emailData.body" 
               rows="12" 
-              class="w-full border border-gray-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none leading-relaxed font-mono bg-gray-50"
+              class="w-full border border-gray-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none leading-relaxed font-mono bg-gray-50 whitespace-pre"
             ></textarea>
           </div>
         </div>
@@ -313,7 +310,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { supabase } from '../lib/supabaseClient'
 
 const props = defineProps({
@@ -323,6 +320,39 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'updated'])
 
+// Templates Textos Base
+const defaultDeliverables = `Service Provider will deliver the following:
+• [INSERT DELIVERABLES]
+• [Be specific: outputs, formats, quantities]
+• [Include anything that defines scope clearly]
+
+Any work not expressly listed above is considered out of scope.`;
+
+const defaultTimeline = `Project Start Date: [INSERT]
+• Key Milestones (optional): [INSERT]
+• Final Delivery Date: [INSERT]
+
+Timeline is dependent on timely client feedback, approvals, and provision of required materials.`;
+
+const defaultFees = `Total Project Fee: $[INSERT]
+
+Payment Terms:
+• [INSERT STRUCTURE]
+
+Payment is a condition precedent to commencement of Services. No work shall begin until payment has been received.
+All payments are non-refundable once Services have commenced.
+Any Services outside the defined Deliverables shall be billed at $[INSERT RATE] or pursuant to a separate written agreement.
+Failure to make timely payment may result in suspension of Services without liability.`;
+
+// Inyección Automática de Templates al abrir el modal
+watch(() => props.isOpen, (newVal) => {
+  if (newVal && props.project?.client) {
+    if (!props.project.client.sow_deliverables) props.project.client.sow_deliverables = defaultDeliverables;
+    if (!props.project.client.sow_timeline) props.project.client.sow_timeline = defaultTimeline;
+    if (!props.project.client.sow_fees_payment) props.project.client.sow_fees_payment = defaultFees;
+  }
+}, { immediate: true });
+
 const activeTab = ref('Overview')
 const stages = [
   'Directory View', 
@@ -331,7 +361,6 @@ const stages = [
   'Churn', 'Project Complete', 'Future Project Opp'
 ]
 
-// LÓGICA DE TRIGGERS
 const suggestedAction = computed(() => {
   const p = props.project
   const c = p?.client
@@ -405,16 +434,14 @@ const updateOverview = async () => {
   } catch (error) { console.error(error.message) }
 }
 
-// --- LOGICA UNIFICADA DE DOCUMENTOS ---
 const showEmailModal = ref(false)
 const isSendingEmail = ref(false)
 const emailData = ref({ subject: '', body: '' })
-const selectedDocs = ref(['NDA', 'SOW']) // Checkboxes para el Dispatch Center
+const selectedDocs = ref(['NDA', 'SOW'])
 
 const saveAndPrepareEmail = async () => {
   if (!props.project?.client) return
   try {
-    // 1. Guardar siempre los datos del SOW en base de datos
     const { error } = await supabase
       .from('clients')
       .update({ 
@@ -426,7 +453,6 @@ const saveAndPrepareEmail = async () => {
 
     if (error) throw error
 
-    // 2. Generar el correo con botones HTML
     openEmailEditor(selectedDocs.value)
 
   } catch (error) {
@@ -441,20 +467,26 @@ const openEmailEditor = (docsToInclude) => {
   let docsText = docsToInclude.join(' and ')
   emailData.value.subject = `Document Request: ${docsText} from SIINGE STUDIO`
 
-  // Construcción del HTML
-  let htmlBody = `<p>Hi ${clientName},</p>\n\n<p>Please review and sign the requested documents for our upcoming collaboration.</p>\n\n<div style="margin: 20px 0;">\n`
+  let htmlBody = `<p style="font-family: sans-serif; color: #374151;">Hi ${clientName},</p>
+
+<p style="font-family: sans-serif; color: #374151;">Please review and sign the requested documents for our upcoming collaboration.</p>
+
+<div style="margin: 30px 0;">
+`
 
   if (docsToInclude.includes('NDA')) {
     const ndaLink = `${baseUrl}/portal/${props.project.client_id}/nda`
-    htmlBody += `<a href="${ndaLink}" style="display:inline-block; margin-bottom:10px; padding:12px 24px; background-color:#1e293b; color:#ffffff; text-decoration:none; border-radius:6px; font-weight:bold; font-family:sans-serif;">Review and sign NDA</a><br>\n`
+    htmlBody += `  <a href="${ndaLink}" style="display:inline-block; margin-bottom:12px; margin-right:12px; padding:12px 24px; background-color:#1e293b; color:#ffffff; text-decoration:none; border-radius:6px; font-weight:bold; font-family:sans-serif;">Review and sign NDA</a><br>\n`
   }
 
   if (docsToInclude.includes('SOW')) {
     const sowLink = `${baseUrl}/portal/${props.project.client_id}/sow`
-    htmlBody += `<a href="${sowLink}" style="display:inline-block; margin-bottom:10px; padding:12px 24px; background-color:#2563eb; color:#ffffff; text-decoration:none; border-radius:6px; font-weight:bold; font-family:sans-serif;">Review and sign SOW</a><br>\n`
+    htmlBody += `  <a href="${sowLink}" style="display:inline-block; margin-bottom:12px; padding:12px 24px; background-color:#2563eb; color:#ffffff; text-decoration:none; border-radius:6px; font-weight:bold; font-family:sans-serif;">Review and sign SOW</a><br>\n`
   }
 
-  htmlBody += `</div>\n\n<p>Best regards,<br><strong>SIINGE STUDIO Team</strong></p>`
+  htmlBody += `</div>
+
+<p style="font-family: sans-serif; color: #374151;">Best regards,<br><strong>SIINGE STUDIO Team</strong></p>`
 
   emailData.value.body = htmlBody
   showEmailModal.value = true
@@ -466,7 +498,6 @@ const dispatchEmail = async () => {
     const sentDate = new Date().toISOString()
     const updates = {}
 
-    // Actualizar estado de los documentos seleccionados
     if (selectedDocs.value.includes('NDA')) {
       updates.nda_status = 'Sent'
       updates.nda_sent_date = sentDate
@@ -481,7 +512,6 @@ const dispatchEmail = async () => {
       props.project.client.sow_sent_date = sentDate
     }
 
-    // Simulador de envío (Aquí luego conectarás tu API de correos como Resend)
     await new Promise(resolve => setTimeout(resolve, 800))
 
     const { error } = await supabase.from('clients').update(updates).eq('id', props.project.client_id)
