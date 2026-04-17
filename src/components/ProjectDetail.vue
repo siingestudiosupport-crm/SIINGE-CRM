@@ -72,7 +72,7 @@
 
           <section v-if="project?.client && (project.client.investment_level || project.client.brand_stage)" class="p-5 border border-gray-200 rounded-xl bg-white shadow-sm">
             <div class="flex items-center gap-2 mb-4 border-b border-gray-100 pb-3">
-              <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+              <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
               <h3 class="font-bold text-gray-800">Strategy Call Intake</h3>
             </div>
             
@@ -167,7 +167,10 @@
               <div>
                 <h3 class="font-bold text-gray-800 text-sm">Non-Disclosure Agreement</h3>
                 <div class="text-xs space-y-1 mt-1 text-gray-500">
-                  <p v-if="project.client.nda_sent_date">📤 Sent: {{ formatDate(project.client.nda_sent_date) }}</p>
+                  <p v-if="project.client.nda_sent_date" class="flex items-center gap-2">
+                    📤 Sent: {{ formatDate(project.client.nda_sent_date) }}
+                    <button @click="resetDocument('NDA')" class="text-[9px] text-blue-500 hover:text-blue-700 underline font-bold cursor-pointer">🔄 Reset / Resend</button>
+                  </p>
                   <p v-if="project.client.nda_signed_date" class="text-green-600">✅ Signed: {{ formatDate(project.client.nda_signed_date) }}</p>
                 </div>
               </div>
@@ -180,7 +183,10 @@
               <div>
                 <h3 class="font-bold text-gray-800 text-sm">Scope of Work (SOW)</h3>
                 <div class="text-xs space-y-1 mt-1 text-gray-500">
-                  <p v-if="project.client.sow_sent_date">📤 Sent: {{ formatDate(project.client.sow_sent_date) }}</p>
+                  <p v-if="project.client.sow_sent_date" class="flex items-center gap-2">
+                    📤 Sent: {{ formatDate(project.client.sow_sent_date) }}
+                    <button @click="resetDocument('SOW')" class="text-[9px] text-blue-500 hover:text-blue-700 underline font-bold cursor-pointer">🔄 Reset / Resend</button>
+                  </p>
                   <p v-if="project.client.sow_signed_date" class="text-green-600">✅ Signed: {{ formatDate(project.client.sow_signed_date) }}</p>
                 </div>
               </div>
@@ -362,7 +368,6 @@ const stages = [
   'Churn', 'Project Complete', 'Future Project Opp'
 ]
 
-// Lógica de Documentos Disponibles Dinámicamente
 const availableDocs = computed(() => {
   const docs = []
   const ndaStatus = props.project?.client?.nda_status
@@ -376,16 +381,13 @@ const availableDocs = computed(() => {
 
 const selectedDocs = ref([])
 
-// Inyección Automática de Templates y Checkboxes
 watch(() => props.isOpen, (newVal) => {
   if (newVal && props.project?.client) {
     if (!props.project.client.sow_deliverables) props.project.client.sow_deliverables = defaultDeliverables;
     if (!props.project.client.sow_timeline) props.project.client.sow_timeline = defaultTimeline;
     if (!props.project.client.sow_fees_payment) props.project.client.sow_fees_payment = defaultFees;
     
-    // Auto-seleccionar los documentos disponibles
     selectedDocs.value = [...availableDocs.value];
-    // Reiniciar vista del correo a preview
     emailViewMode.value = 'preview';
   }
 }, { immediate: true });
@@ -438,6 +440,35 @@ const formatDate = (isoString) => {
   })
 }
 
+// --- FUNCIÓN DE RESETEO ---
+const resetDocument = async (docType) => {
+  if (!confirm(`Are you sure you want to reset the ${docType}? This will allow you to edit and send it again.`)) return;
+  
+  try {
+    const updates = {}
+    if (docType === 'NDA') {
+      updates.nda_status = null
+      updates.nda_sent_date = null
+      props.project.client.nda_status = null
+      props.project.client.nda_sent_date = null
+    } else {
+      updates.sow_status = null
+      updates.sow_sent_date = null
+      props.project.client.sow_status = null
+      props.project.client.sow_sent_date = null
+    }
+
+    const { error } = await supabase.from('clients').update(updates).eq('id', props.project.client_id)
+    if (error) throw error
+
+    // Refrescar los checkboxes disponibles
+    selectedDocs.value = [...availableDocs.value]
+    emit('updated')
+  } catch (error) {
+    alert('Error resetting document: ' + error.message)
+  }
+}
+
 const updateClientTier = async () => {
   if (!props.project?.client_id || !props.project?.client) return
   try {
@@ -464,7 +495,7 @@ const updateOverview = async () => {
 }
 
 const showEmailModal = ref(false)
-const emailViewMode = ref('preview') // Modo por defecto: Preview
+const emailViewMode = ref('preview')
 const isSendingEmail = ref(false)
 const emailData = ref({ subject: '', body: '' })
 
@@ -496,7 +527,6 @@ const openEmailEditor = (docsToInclude) => {
   let docsText = docsToInclude.join(' and ')
   emailData.value.subject = `Document Request: ${docsText} from SIINGE STUDIO`
 
-  // Generación del HTML con diseño limpio para el correo
   let htmlBody = `<p style="font-family: sans-serif; color: #374151;">Hi ${clientName},</p>
 
 <p style="font-family: sans-serif; color: #374151;">Please review and sign the requested documents for our upcoming collaboration.</p>
@@ -523,13 +553,13 @@ const openEmailEditor = (docsToInclude) => {
   emailViewMode.value = 'preview'
 }
 
+// --- ENVÍO REAL USANDO TU FUNCIÓN DE RESEND ---
 const dispatchEmail = async () => {
   try {
     isSendingEmail.value = true
     const sentDate = new Date().toISOString()
     const updates = {}
 
-    // Marcar como enviados los seleccionados
     if (selectedDocs.value.includes('NDA')) {
       updates.nda_status = 'Sent'
       updates.nda_sent_date = sentDate
@@ -544,17 +574,32 @@ const dispatchEmail = async () => {
       props.project.client.sow_sent_date = sentDate
     }
 
-    await new Promise(resolve => setTimeout(resolve, 800))
+    // LLAMADA A LA EDGE FUNCTION DE RESEND
+    // Asegúrate de que el nombre 'send-email' sea exactamente el nombre de tu función en Supabase.
+    const { data: emailResponse, error: emailError } = await supabase.functions.invoke('send-email', {
+      body: {
+        to: props.project.client.email,
+        subject: emailData.value.subject,
+        html: emailData.value.body
+      }
+    })
 
-    const { error } = await supabase.from('clients').update(updates).eq('id', props.project.client_id)
-    if (error) throw error
+    if (emailError) {
+      throw new Error('Error al enviar con Resend: ' + emailError.message)
+    }
+
+    // Solo si el correo se envió con éxito, guardamos el status 'Sent' en la base de datos
+    const { error: dbError } = await supabase.from('clients').update(updates).eq('id', props.project.client_id)
+    if (dbError) throw dbError
 
     alert(`Documents (${selectedDocs.value.join(', ')}) sent successfully!`)
     showEmailModal.value = false
+    
+    selectedDocs.value = []
     emit('updated')
 
   } catch (error) {
-    alert('Error sending email: ' + error.message)
+    alert('Failed: ' + error.message)
   } finally {
     isSendingEmail.value = false
   }
