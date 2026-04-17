@@ -22,7 +22,7 @@
       <table class="w-full text-left border-collapse">
         <thead>
           <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
-            <th class="p-4 font-semibold">Name</th>
+            <th class="p-4 font-semibold">Name & Contact</th>
             <th class="p-4 font-semibold">Company</th>
             <th class="p-4 font-semibold">Contracts</th>
             <th class="p-4 font-semibold">Join Date</th>
@@ -40,8 +40,19 @@
             <td class="p-4">
               <div class="font-bold text-gray-800 group-hover:text-blue-600">{{ client.name }}</div>
               <div class="text-xs text-gray-400 font-medium">{{ client.email }}</div>
+              <div v-if="client.phone_number" class="text-[11px] text-gray-500 mt-1.5 flex items-center gap-1.5 font-medium bg-gray-50 border border-gray-100 w-max px-2 py-0.5 rounded-md">
+                <span v-if="client.country">{{ client.country }}</span>
+                <span v-if="client.country" class="text-gray-300">|</span>
+                <span>📞 {{ client.phone_number }}</span>
+              </div>
             </td>
-            <td class="p-4 text-gray-600 text-sm">{{ client.company || 'N/A' }}</td>
+            <td class="p-4 text-gray-600 text-sm">
+              {{ client.company || 'N/A' }}
+              <div v-if="client.investment_level && client.investment_level !== 'No especificado'" class="text-xs text-green-600 mt-1 font-semibold flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                Strategy Call
+              </div>
+            </td>
             
             <td class="p-4">
               <div class="flex flex-col gap-1">
@@ -73,17 +84,61 @@
       </table>
     </div>
 
-    <div v-if="showModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60]">
-      <div class="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden animate-slide-up">
+    <div v-if="showModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60] overflow-y-auto">
+      <div class="bg-white rounded-xl shadow-lg w-full max-w-2xl overflow-hidden animate-slide-up my-8">
         <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
           <h3 class="text-lg font-bold text-gray-800">{{ editingId ? 'Edit Client' : 'New Client' }}</h3>
           <button @click="closeModal" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
         </div>
-        <form @submit.prevent="saveClient" class="p-6 space-y-4">
-          <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name</label><input v-model="form.name" type="text" required class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500" /></div>
-          <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label><input v-model="form.email" type="email" required class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500" /></div>
-          <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Company</label><input v-model="form.company" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500" /></div>
-          <div class="pt-4 flex justify-end gap-3">
+        
+        <form @submit.prevent="saveClient" class="p-6">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="col-span-2 md:col-span-1">
+              <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name</label>
+              <input v-model="form.name" type="text" required class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+            </div>
+            <div class="col-span-2 md:col-span-1">
+              <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label>
+              <input v-model="form.email" type="email" required class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+            </div>
+            
+            <div class="col-span-2 md:col-span-1">
+              <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Company</label>
+              <input v-model="form.company" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+            </div>
+            <div class="col-span-2 md:col-span-1">
+              <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Phone Number</label>
+              <input v-model="form.phone_number" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="+1 234 567 8900" />
+            </div>
+
+            <div class="col-span-2 border-t border-gray-200 pt-4 mt-2">
+              <h4 class="text-sm font-bold text-gray-800 mb-4">Strategy Call Details</h4>
+              <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2 md:col-span-1">
+                  <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Brand Stage</label>
+                  <input v-model="form.brand_stage" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                </div>
+                <div class="col-span-2 md:col-span-1">
+                  <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Investment Level</label>
+                  <input v-model="form.investment_level" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                </div>
+                <div class="col-span-2 md:col-span-1">
+                  <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Timeline</label>
+                  <input v-model="form.development_timeline" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                </div>
+                <div class="col-span-2 md:col-span-1">
+                  <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Support Level</label>
+                  <input v-model="form.support_level" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Primary Issue / Need</label>
+                  <textarea v-model="form.primary_issue" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm"></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-6 flex justify-end gap-3 border-t border-gray-100 mt-6">
             <button type="button" @click="closeModal" class="px-4 py-2 text-gray-500 font-bold hover:bg-gray-50 rounded-lg">Cancel</button>
             <button type="submit" :disabled="isSubmitting" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-md">
               {{ isSubmitting ? 'Saving...' : 'Save Changes' }}
@@ -106,7 +161,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { supabase } from '../lib/supabaseClient'
-import ProjectDetail from '../components/ProjectDetail.vue' // <-- Verifica que esta ruta sea correcta en tu proyecto
+import ProjectDetail from '../components/ProjectDetail.vue' 
 
 const clients = ref([])
 const loading = ref(true)
@@ -117,7 +172,10 @@ const editingId = ref(null)
 const isDetailOpen = ref(false)
 const selectedProject = ref(null)
 
-const form = ref({ name: '', email: '', company: '', lead_source: 'Manual Entry' })
+const form = ref({ 
+  name: '', email: '', company: '', phone_number: '', country: '', lead_source: 'Manual Entry',
+  brand_stage: '', investment_level: '', development_timeline: '', support_level: '', primary_issue: ''
+})
 
 const getStatusClass = (status) => {
   if (status === 'Signed') return 'bg-green-100 text-green-700 border border-green-200'
@@ -134,15 +192,16 @@ const fetchClients = async () => {
   } catch (err) { console.error(err) } finally { loading.value = false }
 }
 
-// ESTA ES LA FUNCIÓN QUE ABRE LA TARJETA DESDE EL DIRECTORIO
 const openClientDetail = (client) => {
   selectedProject.value = {
-    id: null, // Como no es un proyecto del Kanban, no tiene ID de proyecto
+    id: null,
     title: `Client Profile: ${client.name}`,
     client: client,
     client_id: client.id,
-    pipeline_stage: 'Directory View', // Un stage falso para que no choque
-    created_at: client.created_at // Crucial para calcular el Time to Close
+    pipeline_stage: 'Directory View',
+    created_at: client.created_at,
+    scheduled_date: client.scheduled_date, 
+    meeting_link: client.meeting_link      
   }
   isDetailOpen.value = true
 }
@@ -153,7 +212,10 @@ const openModal = (client = null) => {
     form.value = { ...client }
   } else {
     editingId.value = null
-    form.value = { name: '', email: '', company: '', lead_source: 'Manual Entry' }
+    form.value = { 
+      name: '', email: '', company: '', phone_number: '', country: '', lead_source: 'Manual Entry',
+      brand_stage: '', investment_level: '', development_timeline: '', support_level: '', primary_issue: '' 
+    }
   }
   showModal.value = true
 }

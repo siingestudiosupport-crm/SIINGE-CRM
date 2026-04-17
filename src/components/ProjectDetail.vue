@@ -7,11 +7,16 @@
       <div class="p-6 border-b border-gray-200 flex justify-between items-start bg-gray-50">
         <div>
           <h2 class="text-xl font-bold text-gray-800">{{ project?.title || 'Project Detail' }}</h2>
-          <div class="flex items-center gap-2 mt-1">
+          <div class="flex items-center gap-2 mt-2">
             <p class="text-sm text-blue-600 font-bold">{{ project?.client?.name || 'Unknown Client' }}</p>
             <span v-if="project?.client?.client_tier" :class="['text-[9px] px-2 py-0.5 rounded-full font-bold uppercase border', getTierClass(project.client.client_tier)]">
               {{ project.client.client_tier }}
             </span>
+          </div>
+          <div v-if="project?.client?.phone_number" class="flex items-center gap-2 mt-1">
+            <span v-if="project?.client?.country" class="text-xs text-gray-500 font-medium">{{ project.client.country }}</span>
+            <span v-if="project?.client?.country" class="text-gray-300 text-xs">|</span>
+            <span class="text-xs text-gray-500 font-medium">📞 {{ project.client.phone_number }}</span>
           </div>
         </div>
         <button @click="$emit('close')" class="text-gray-400 hover:text-gray-800 text-2xl leading-none">&times;</button>
@@ -65,6 +70,42 @@
             </div>
           </section>
 
+          <section v-if="project?.client && (project.client.investment_level || project.client.brand_stage)" class="p-5 border border-gray-200 rounded-xl bg-white shadow-sm">
+            <div class="flex items-center gap-2 mb-4 border-b border-gray-100 pb-3">
+              <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+              <h3 class="font-bold text-gray-800">Strategy Call Intake</h3>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-y-5 gap-x-4">
+              <div>
+                <p class="text-[10px] font-bold text-gray-400 uppercase mb-1">Brand Stage</p>
+                <p class="text-sm text-gray-800 font-medium">{{ project.client.brand_stage || 'N/A' }}</p>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-gray-400 uppercase mb-1">Investment Level</p>
+                <p class="text-sm text-gray-800 font-medium">{{ project.client.investment_level || 'N/A' }}</p>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-gray-400 uppercase mb-1">Timeline</p>
+                <p class="text-sm text-gray-800 font-medium">{{ project.client.development_timeline || 'N/A' }}</p>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-gray-400 uppercase mb-1">Support Level</p>
+                <p class="text-sm text-gray-800 font-medium">{{ project.client.support_level || 'N/A' }}</p>
+              </div>
+              
+              <div class="col-span-2 pt-2">
+                <p class="text-[10px] font-bold text-gray-400 uppercase mb-1.5">Primary Issue / Need</p>
+                <div class="bg-gray-50 p-3.5 rounded-lg border border-gray-100 relative">
+                  <span class="absolute top-2 left-2 text-gray-300 text-xl leading-none">"</span>
+                  <p class="text-sm text-gray-700 font-medium italic pl-4 relative z-10 leading-relaxed">
+                    {{ project.client.primary_issue || 'No specific issue mentioned.' }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <section v-if="project.pipeline_stage === 'Churn'" class="p-4 bg-red-50 border border-red-200 rounded-lg">
             <label class="block text-xs font-bold text-red-700 uppercase mb-2">Reason for Loss (Required)</label>
             <select v-model="project.loss_reason" @change="updateOverview" class="w-full border border-red-300 rounded-lg p-2.5 text-sm bg-white focus:ring-2 focus:ring-red-500 outline-none text-red-900 font-bold">
@@ -78,11 +119,15 @@
           </section>
 
           <section class="grid grid-cols-2 gap-4">
-            <div class="p-4 bg-gray-50 rounded-lg border border-gray-100">
+            <div class="p-4 bg-gray-50 rounded-lg border border-gray-100 flex flex-col justify-center">
               <p class="text-[10px] font-bold text-gray-400 uppercase mb-1">Meeting Date</p>
               <p class="font-medium text-gray-800 text-sm">
-                {{ project.scheduled_date ? new Date(project.scheduled_date).toLocaleString() : 'Not scheduled' }}
+                {{ project.scheduled_date ? new Date(project.scheduled_date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Not scheduled' }}
               </p>
+              <a v-if="project.meeting_link" :href="project.meeting_link" target="_blank" class="mt-2 w-max inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-800 rounded text-[10px] font-bold uppercase tracking-wider transition-colors">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                Join Meeting
+              </a>
             </div>
             <div class="p-4 bg-gray-50 rounded-lg border border-gray-100 flex flex-col justify-center">
               <p class="text-[10px] font-bold text-gray-400 uppercase mb-1">Client Tier</p>
@@ -270,16 +315,14 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'updated'])
 
-// UI State
 const activeTab = ref('Overview')
 const stages = [
-  'Directory View', // <-- Agregado para que no choque si abres desde Clientes
+  'Directory View', 
   'Intake Form Received', 'Call Booked', 'Proposal Sent', 
   'Contracts Signed', 'Invoice Paid', 'Follow Up Needed', 
   'Churn', 'Project Complete', 'Future Project Opp'
 ]
 
-// LÓGICA DE TRIGGERS
 const suggestedAction = computed(() => {
   const p = props.project
   const c = p?.client
@@ -300,7 +343,6 @@ const suggestedAction = computed(() => {
   return null
 })
 
-// CÁLCULO DE MÉTRICAS
 const timeToClose = computed(() => {
   const p = props.project
   if (!p || !p.created_at || (!p.closed_at && !p.client?.sow_signed_date)) return null
@@ -311,7 +353,6 @@ const timeToClose = computed(() => {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 })
 
-// Helpers Visuales
 const getStatusClass = (status) => {
   if (status === 'Signed') return 'bg-green-100 text-green-700 border border-green-200'
   if (status === 'Sent') return 'bg-amber-100 text-amber-700 border border-amber-200'
@@ -345,9 +386,8 @@ const updateClientTier = async () => {
   }
 }
 
-// Database Actions: Overview
 const updateOverview = async () => {
-  if (!props.project || !props.project.id) return // Si se abre desde Clients.vue (no tiene ID de proyecto), ignoramos guardado en 'projects'
+  if (!props.project || !props.project.id) return 
   try {
     const updates = { 
       pipeline_stage: props.project.pipeline_stage,
@@ -365,7 +405,6 @@ const updateOverview = async () => {
   }
 }
 
-// --- EMAIL & CONTRACT LOGIC ---
 const showEmailModal = ref(false)
 const isSendingEmail = ref(false)
 const emailData = ref({ type: '', subject: '', body: '' })
