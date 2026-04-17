@@ -277,11 +277,6 @@ watch(sigCanvas, (canvas) => {
   if (canvas) initCanvas()
 })
 
-watch(form, () => {
-  if (!isSigned.value) {
-    generateLivePDFPreview()
-  }
-}, { deep: true })
 
 const submitDocument = async () => {
   try {

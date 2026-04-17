@@ -344,18 +344,13 @@
             </div>
           </div>
 
-          <div class="mt-6">
-            <div class="flex justify-between items-center mb-3">
-              <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Message Construction</label>
-              <div class="flex bg-gray-100 rounded-xl p-1 shadow-inner border border-gray-200">
-                <button type="button" @click="emailViewMode = 'preview'" :class="['px-5 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all', emailViewMode === 'preview' ? 'bg-white text-blue-600 shadow-md transform scale-105' : 'text-gray-500 hover:text-gray-700']">Client View</button>
-                <button type="button" @click="emailViewMode = 'code'" :class="['px-5 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all', emailViewMode === 'code' ? 'bg-white text-blue-600 shadow-md transform scale-105' : 'text-gray-500 hover:text-gray-700']">HTML Editor</button>
-              </div>
+          <div class="mt-6 space-y-4">
+            <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Message</label>
+            <textarea v-model="emailData.messageText" rows="6" class="w-full border-2 border-gray-100 rounded-2xl p-6 text-sm bg-white shadow-inner focus:border-blue-500 outline-none transition-all resize-none"></textarea>
+            <div class="border-2 border-gray-100 rounded-2xl p-6 bg-gray-50">
+              <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Signature Links</p>
+              <div v-html="emailData.buttonsHtml"></div>
             </div>
-            
-            <div v-if="emailViewMode === 'preview'" class="w-full border-2 border-gray-100 rounded-2xl p-8 text-sm bg-white shadow-inner max-h-[380px] overflow-y-auto prose prose-sm max-w-none transition-all" v-html="emailData.body"></div>
-            
-            <textarea v-else v-model="emailData.body" rows="14" class="w-full border-2 border-gray-100 rounded-2xl p-6 text-sm font-mono bg-gray-900 text-green-400 shadow-inner focus:border-blue-500 outline-none transition-all"></textarea>
           </div>
         </div>
 
@@ -395,11 +390,10 @@ const defaultFees = `Total Project Fee: $[INSERT]\n\nPayment Terms:\n• [INSERT
 
 // --- ESTADOS DE UI Y NEGOCIO ---
 const activeTab = ref('Overview')
-const emailViewMode = ref('preview')
 const showEmailModal = ref(false)
 const isSendingEmail = ref(false)
 const selectedDocs = ref([])
-const emailData = ref({ subject: '', body: '' })
+const emailData = ref({ subject: '', messageText: '', buttonsHtml: '' })
 
 const stages = [
   'Directory View', 'Intake Form Received', 'Call Booked', 'Proposal Sent', 
@@ -418,7 +412,6 @@ watch(() => props.isOpen, (newVal) => {
     
     // Auto-selección inteligente de lo que falta enviar
     selectedDocs.value = availableDocs.value;
-    emailViewMode.value = 'preview';
   }
 }, { immediate: true });
 
@@ -522,23 +515,19 @@ const saveAndPrepareEmail = async () => {
     const docsText = selectedDocs.value.join(' and ')
     emailData.value.subject = `Document Request: ${docsText} from SIINGE STUDIO`
 
-    let htmlBody = `<p style="font-family: sans-serif; color: #374151;">Hi ${clientName},</p>
-    <p style="font-family: sans-serif; color: #374151;">Please review and sign the requested documents for our upcoming collaboration. Click the buttons below to access your secure portal:</p>
-    <div style="margin: 35px 0;">`
+    emailData.value.messageText = `Hi ${clientName},\n\nPlease review and sign the requested documents for our upcoming collaboration. Click the buttons below to access your secure portal:\n\nBest regards,\nSIINGE STUDIO Team`
 
+    let buttonsHtml = `<div style="margin: 10px 0;">`
     if (selectedDocs.value.includes('NDA')) {
       const link = `${baseUrl}/portal/${props.project.client_id}/nda`
-      htmlBody += `<a href="${link}" style="display:inline-block; margin-bottom:12px; margin-right:12px; padding:15px 28px; background-color:#1e293b; color:#ffffff; text-decoration:none; border-radius:10px; font-weight:bold; font-family:sans-serif; font-size: 14px; shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">Review & Sign NDA</a>`
+      buttonsHtml += `<a href="${link}" style="display:inline-block; margin-bottom:12px; margin-right:12px; padding:15px 28px; background-color:#1e293b; color:#ffffff; text-decoration:none; border-radius:10px; font-weight:bold; font-family:sans-serif; font-size: 14px;">Review & Sign NDA</a>`
     }
-
     if (selectedDocs.value.includes('SOW')) {
       const link = `${baseUrl}/portal/${props.project.client_id}/sow`
-      htmlBody += `<a href="${link}" style="display:inline-block; margin-bottom:12px; padding:15px 28px; background-color:#2563eb; color:#ffffff; text-decoration:none; border-radius:10px; font-weight:bold; font-family:sans-serif; font-size: 14px; shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">Review & Sign SOW</a>`
+      buttonsHtml += `<a href="${link}" style="display:inline-block; margin-bottom:12px; padding:15px 28px; background-color:#2563eb; color:#ffffff; text-decoration:none; border-radius:10px; font-weight:bold; font-family:sans-serif; font-size: 14px;">Review & Sign SOW</a>`
     }
-
-    htmlBody += `</div><p style="font-family: sans-serif; color: #374151;">Best regards,<br><strong>SIINGE STUDIO Team</strong></p>`
-
-    emailData.value.body = htmlBody
+    buttonsHtml += `</div>`
+    emailData.value.buttonsHtml = buttonsHtml
     showEmailModal.value = true
   } catch (e) { 
     await showAlert('Critical error saving SOW: ' + e.message, 'Error')
@@ -555,7 +544,7 @@ const dispatchEmail = async () => {
       body: { 
         to: props.project.client.email, 
         subject: emailData.value.subject, 
-        html: emailData.value.body,
+        html: emailData.value.messageText.split('\n').map(l => l ? `<p style="font-family:sans-serif;color:#374151;margin:0 0 8px">${l}</p>` : '').join('') + emailData.value.buttonsHtml,
         client_id: props.project.client_id, // Metadata para el webhook de apertura
         doc_type: selectedDocs.value.join('+') // NDA, SOW o NDA+SOW
       }
