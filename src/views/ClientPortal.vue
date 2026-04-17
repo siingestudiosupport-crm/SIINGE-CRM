@@ -24,8 +24,20 @@
 
       <div class="px-8 py-8">
         
+        <div v-if="isReviewMode" class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-bold text-blue-800 uppercase tracking-wider">Review Mode</h3>
+              <p class="text-blue-600 text-xs mt-1">Please review the document carefully before proceeding to sign.</p>
+            </div>
+            <button @click="enableSigning" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors">
+              Enable Signing Mode
+            </button>
+          </div>
+        </div>
+        
         <div class="w-full h-[600px] border border-gray-300 rounded-lg overflow-hidden mb-10 bg-gray-100 shadow-inner">
-          <iframe v-if="pdfPreviewUrl" :src="pdfPreviewUrl" class="w-full h-full" frameborder="0"></iframe>
+          <iframe v-if="pdfPreviewUrl" :src="pdfPreviewUrl + (isReviewMode ? '#toolbar=0&navpanes=0&scrollbar=0' : '')" class="w-full h-full" frameborder="0"></iframe>
           <div v-else class="flex flex-col items-center justify-center w-full h-full text-gray-400">
             <svg class="animate-spin h-8 w-8 text-blue-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -35,7 +47,7 @@
           </div>
         </div>
 
-        <div class="pt-8 border-t border-gray-200">
+        <div v-if="!isReviewMode" class="pt-8 border-t border-gray-200">
           <h3 class="text-lg font-bold text-gray-900 mb-6">Execution & Signatures</h3>
 
           <div v-if="!isSigned" class="space-y-6">
@@ -116,6 +128,7 @@ const isSubmitting = ref(false)
 const isGeneratingPDF = ref(false)
 const client = ref(null)
 const pdfPreviewUrl = ref('')
+const isReviewMode = ref(true)
 
 const form = ref({ company_name: '', full_address: '', business_name: '', client_name: '', client_title: '' })
 const sigCanvas = ref(null); const ctx = ref(null); const isDrawing = ref(false); const hasDrawn = ref(false)
@@ -158,6 +171,7 @@ const fetchDocument = async () => {
     
     await generateLivePDFPreview()
     if (!isSigned.value) setTimeout(initCanvas, 150)
+    isReviewMode.value = !isSigned.value
   } catch (error) { 
     console.error(error) 
   } finally { 
@@ -256,6 +270,8 @@ const draw = (e) => { if (!isDrawing.value) return; const c = getCoords(e); ctx.
 const drawTouch = (e) => draw(e)
 const stopDrawing = () => { isDrawing.value = false; ctx.value?.closePath() }
 const clearSignature = () => { ctx.value.clearRect(0,0,sigCanvas.value.width,sigCanvas.value.height); hasDrawn.value = false }
+
+const enableSigning = () => { isReviewMode.value = false }
 
 const submitDocument = async () => {
   try {
