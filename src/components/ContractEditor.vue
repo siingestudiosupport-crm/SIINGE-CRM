@@ -105,9 +105,11 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { supabase } from '../lib/supabaseClient'
+import { useConfirmModal } from '../composables/useConfirmModal'
 
 const props = defineProps({ selection: Object })
 const emit = defineEmits(['close', 'sent'])
+const { alert: showAlert } = useConfirmModal()
 
 const step = ref(1) 
 const loading = ref(false)
@@ -177,14 +179,17 @@ const saveDataAndGenerate = async () => {
     
     step.value = 2
   } catch (err) { 
-    alert('Error: ' + err.message) 
+    await showAlert('Error: ' + err.message, 'Error')
   } finally { 
     loading.value = false 
   }
 }
 
 const sendWithSupabaseFunction = async () => {
-  if (!clientData.value.email) return alert("Client email is missing!")
+  if (!clientData.value.email) {
+    await showAlert('Client email is missing!', 'Missing Information')
+    return
+  }
 
   try {
     loading.value = true
@@ -202,10 +207,10 @@ const sendWithSupabaseFunction = async () => {
 
     if (error) throw error
 
-    alert('Email sent successfully via production server!')
+    await showAlert('Email sent successfully via production server!', 'Success')
     emit('sent')
   } catch (err) {
-    alert('Error sending email: ' + err.message)
+    await showAlert('Error sending email: ' + err.message, 'Error')
   } finally {
     loading.value = false
   }

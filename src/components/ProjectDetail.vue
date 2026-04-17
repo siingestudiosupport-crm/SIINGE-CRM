@@ -378,6 +378,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { supabase } from '../lib/supabaseClient'
+import { useConfirmModal } from '../composables/useConfirmModal'
 
 const props = defineProps({
   isOpen: Boolean,
@@ -385,6 +386,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close', 'updated'])
+const { confirm: showConfirm, alert: showAlert } = useConfirmModal()
 
 // --- CONFIGURACIÓN DE TEMPLATES LEGALES ---
 const defaultDeliverables = `Service Provider will deliver the following:\n• [INSERT DELIVERABLES]\n• [Be specific: outputs, formats, quantities]\n\nAny work not expressly listed above is considered out of scope.`;
@@ -487,7 +489,14 @@ const updateClientTier = async () => {
 }
 
 const resetDocument = async (type) => {
-  if (!confirm(`Are you sure you want to reset the ${type}? It will clear the status and allow you to re-edit and re-send.`)) return;
+  const confirmed = await showConfirm({
+    title: 'Reset Document',
+    message: `Are you sure you want to reset the ${type}? It will clear the status and allow you to re-edit and re-send.`,
+    confirmText: 'Reset',
+    cancelText: 'Cancel',
+    isDangerous: true
+  })
+  if (!confirmed) return;
   const key = type.toLowerCase();
   const updates = { [`${key}_status`]: null, [`${key}_sent_date`]: null, [`${key}_opened_at`]: null };
   await supabase.from('clients').update(updates).eq('id', props.project.client_id);
@@ -531,7 +540,9 @@ const saveAndPrepareEmail = async () => {
 
     emailData.value.body = htmlBody
     showEmailModal.value = true
-  } catch (e) { alert('Critical error saving SOW: ' + e.message) }
+  } catch (e) { 
+    await showAlert('Critical error saving SOW: ' + e.message, 'Error')
+  }
 }
 
 const dispatchEmail = async () => {
@@ -560,13 +571,13 @@ const dispatchEmail = async () => {
     const { error: dbError } = await supabase.from('clients').update(updates).eq('id', props.project.client_id)
     if (dbError) throw dbError
 
-    alert('Documents dispatched successfully! CC sent to sierra@siinge.studio')
+    await showAlert('Documents dispatched successfully! CC sent to sierra@siinge.studio', 'Success')
     showEmailModal.value = false
     selectedDocs.value = []
     emit('updated')
 
   } catch (err) {
-    alert('Failed to send: ' + err.message)
+    await showAlert('Failed to send: ' + err.message, 'Error')
   } finally {
     isSendingEmail.value = false
   }

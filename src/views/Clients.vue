@@ -161,7 +161,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { supabase } from '../lib/supabaseClient'
-import ProjectDetail from '../components/ProjectDetail.vue' 
+import { useConfirmModal } from '../composables/useConfirmModal'
+import ProjectDetail from '../components/ProjectDetail.vue'
+
+const { confirm: showConfirm, alert: showAlert } = useConfirmModal() 
 
 const clients = ref([])
 const loading = ref(true)
@@ -237,16 +240,27 @@ const saveClient = async () => {
     }
     closeModal()
     fetchClients()
-  } catch (err) { alert(err.message) } finally { isSubmitting.value = false }
+  } catch (err) { 
+    await showAlert(err.message, 'Error')
+  } finally { isSubmitting.value = false }
 }
 
 const confirmDelete = async (client) => {
-  if (confirm(`Are you sure you want to delete ${client.name}? This will also delete all their projects and signed contracts.`)) {
+  const confirmed = await showConfirm({
+    title: 'Delete Client',
+    message: `Are you sure you want to delete ${client.name}? This will also delete all their projects and signed contracts.`,
+    confirmText: 'Delete',
+    cancelText: 'Cancel',
+    isDangerous: true
+  })
+  if (confirmed) {
     try {
       const { error } = await supabase.from('clients').delete().eq('id', client.id)
       if (error) throw error
       fetchClients()
-    } catch (err) { alert(err.message) }
+    } catch (err) { 
+      await showAlert(err.message, 'Error')
+    }
   }
 }
 

@@ -12,18 +12,29 @@
         Sign Out
       </button>
     </div>
+
+    <ConfirmModal ref="confirmModal" />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { supabase } from './lib/supabaseClient'
+import { useConfirmModal } from './composables/useConfirmModal'
 import Login from './components/Login.vue'
+import ConfirmModal from './components/ConfirmModal.vue'
 
 const session = ref(null)
+const confirmModal = ref(null)
+const { setModalInstance } = useConfirmModal()
 
 onMounted(() => {
-  // Verificamos sesión actual
+  // Initialize confirm modal
+  if (confirmModal.value) {
+    setModalInstance(confirmModal.value)
+  }
+  
+  // Verify current session
   supabase.auth.getSession().then(({ data }) => {
     session.value = data.session
   })

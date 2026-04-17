@@ -106,9 +106,11 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { supabase } from '../lib/supabaseClient'
+import { useConfirmModal } from '../composables/useConfirmModal'
 import { PDFDocument } from 'pdf-lib'
 
 const route = useRoute()
+const { alert: showAlert } = useConfirmModal()
 const loading = ref(true)
 const isSubmitting = ref(false)
 const isGeneratingPDF = ref(false)
@@ -240,7 +242,7 @@ const downloadPDF = async () => {
     link.click()
     document.body.removeChild(link)
   } catch (err) { 
-    alert('Error generating official PDF') 
+    await showAlert('Error generating official PDF', 'Error')
   } finally { 
     isGeneratingPDF.value = false 
   }
@@ -327,7 +329,7 @@ const submitDocument = async () => {
     await fetchDocument() 
   } catch (error) { 
     console.error("FALLO GENERAL:", error);
-    alert('Fallo en el sistema: ' + error.message) 
+    await showAlert('System error: ' + error.message, 'Critical Error')
   } finally { 
     isSubmitting.value = false 
   }
