@@ -115,7 +115,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { supabase } from '../lib/supabaseClient'
 import { useConfirmModal } from '../composables/useConfirmModal'
@@ -156,11 +156,19 @@ const fetchDocument = async () => {
     client.value = data
     
     if (data) {
-      form.value.company_name = data.company || ''
-      form.value.client_name = isNDA.value ? (data.nda_client_name || '') : (data.sow_client_name || '')
-      form.value.client_title = isNDA.value ? (data.nda_client_title || '') : (data.sow_client_title || '')
-      form.value.full_address = data.full_address || ''
-      form.value.business_name = data.business_name || ''
+      if (isSigned.value) {
+        form.value.company_name = data.company || ''
+        form.value.client_name = isNDA.value ? (data.nda_client_name || '') : (data.sow_client_name || '')
+        form.value.client_title = isNDA.value ? (data.nda_client_title || '') : (data.sow_client_title || '')
+        form.value.full_address = data.full_address || ''
+        form.value.business_name = data.business_name || ''
+      } else {
+        form.value.company_name = ''
+        form.value.client_name = ''
+        form.value.client_title = ''
+        form.value.full_address = ''
+        form.value.business_name = ''
+      }
       
       // Tracking: Fase 1 (Apertura)
       const openedField = isNDA.value ? 'nda_opened_at' : 'sow_opened_at'
@@ -170,7 +178,6 @@ const fetchDocument = async () => {
     }
     
     await generateLivePDFPreview()
-    if (!isSigned.value) setTimeout(initCanvas, 150)
     isReviewMode.value = !isSigned.value
   } catch (error) { 
     console.error(error) 
@@ -179,7 +186,7 @@ const fetchDocument = async () => {
   }
 }
 
-const buildPDF = async (forDownload = false) => {
+const buildPDF = async (forDownload = false, flattenPdf = false) => {
   const url = isNDA.value ? '/mutual_nda.pdf' : '/sow.pdf'
   const existingPdfBytes = await fetch(url).then(res => res.arrayBuffer())
   const pdfDoc = await PDFDocument.load(existingPdfBytes)
@@ -199,11 +206,11 @@ const buildPDF = async (forDownload = false) => {
     fillExactField('timeline', p.sow_timeline)
     fillExactField('fees_payment', p.sow_fees_payment)
     fillExactField('date_3', formatDate(p.sow_sent_date))
-    fillExactField('company_name', form.value.company_name || p.company)
-    fillExactField('full_address', form.value.full_address || p.full_address)
-    fillExactField('business_name', form.value.business_name || p.business_name)
-    fillExactField('client_name', form.value.client_name || p.sow_client_name)
-    fillExactField('client_title', form.value.client_title || p.sow_client_title)
+    fillExactField('company_name', form.value.company_name)
+    fillExactField('full_address', form.value.full_address)
+    fillExactField('business_name', form.value.business_name)
+    fillExactField('client_name', form.value.client_name)
+    fillExactField('client_title', form.value.client_title)
     fillExactField('date_2', formatDate(p.sow_signed_date))
 
     if (forDownload && p.sow_signature) {
@@ -215,9 +222,9 @@ const buildPDF = async (forDownload = false) => {
     }
   } else {
     fillExactField('date_1', formatDate(p.nda_sent_date))
-    fillExactField('company_name', form.value.company_name || p.company)
-    fillExactField('client_name', form.value.client_name || p.nda_client_name)
-    fillExactField('client_title', form.value.client_title || p.nda_client_title)
+    fillExactField('company_name', form.value.company_name)
+    fillExactField('client_name', form.value.client_name)
+    fillExactField('client_title', form.value.client_title)
     fillExactField('date_2', formatDate(p.nda_signed_date))
     fillExactField('date_3', formatDate(p.nda_sent_date))
     
@@ -230,13 +237,13 @@ const buildPDF = async (forDownload = false) => {
     }
   }
 
-  if (forDownload) pdfForm.flatten() 
+  if (flattenPdf || forDownload) pdfForm.flatten()
   return await pdfDoc.save()
 }
 
 const generateLivePDFPreview = async () => {
   try {
-    const pdfBytes = await buildPDF(false)
+    const pdfBytes = await buildPDF(false, true)
     const blob = new Blob([pdfBytes], { type: 'application/pdf' })
     if (pdfPreviewUrl.value) URL.revokeObjectURL(pdfPreviewUrl.value)
     pdfPreviewUrl.value = URL.createObjectURL(blob)
@@ -271,7 +278,17 @@ const drawTouch = (e) => draw(e)
 const stopDrawing = () => { isDrawing.value = false; ctx.value?.closePath() }
 const clearSignature = () => { ctx.value.clearRect(0,0,sigCanvas.value.width,sigCanvas.value.height); hasDrawn.value = false }
 
-const enableSigning = () => { isReviewMode.value = false }
+const enableSigning = async () => { 
+  isReviewMode.value = false
+  await nextTick()
+  initCanvas()
+}
+
+watch(form, () => {
+  if (!isSigned.value) {
+    generateLivePDFPreview()
+  }
+}, { deep: true })
 
 const submitDocument = async () => {
   try {
