@@ -176,15 +176,23 @@
               </span>
             </div>
 
-            <div class="p-5 border border-gray-200 rounded-xl bg-white shadow-sm">
-              <div class="flex justify-between items-center mb-5 border-b border-gray-100 pb-3">
-                <div>
-                  <h3 class="font-bold text-gray-800 text-sm">Scope of Work Configuration</h3>
-                  <p class="text-xs text-gray-500 mt-0.5">Customize the 3 main contract clauses.</p>
+            <div class="p-4 border border-gray-200 rounded-xl bg-gray-50/50 flex justify-between items-center">
+              <div>
+                <h3 class="font-bold text-gray-800 text-sm">Scope of Work (SOW)</h3>
+                <div class="text-xs space-y-1 mt-1 text-gray-500">
+                  <p v-if="project.client.sow_sent_date">📤 Sent: {{ formatDate(project.client.sow_sent_date) }}</p>
+                  <p v-if="project.client.sow_signed_date" class="text-green-600">✅ Signed: {{ formatDate(project.client.sow_signed_date) }}</p>
                 </div>
-                <span :class="getStatusClass(project.client.sow_status)" class="text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wide">
-                  {{ project.client.sow_status || 'Not Sent' }}
-                </span>
+              </div>
+              <span :class="getStatusClass(project.client.sow_status)" class="text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wide">
+                {{ project.client.sow_status || 'Not Sent' }}
+              </span>
+            </div>
+
+            <div v-if="!['Sent', 'Signed'].includes(project.client.sow_status)" class="p-5 border border-gray-200 rounded-xl bg-white shadow-sm">
+              <div class="mb-5 border-b border-gray-100 pb-3">
+                <h3 class="font-bold text-gray-800 text-sm">Scope of Work Configuration</h3>
+                <p class="text-xs text-gray-500 mt-0.5">Customize the 3 main contract clauses before sending.</p>
               </div>
 
               <div class="space-y-5">
@@ -217,15 +225,15 @@
               </div>
             </div>
 
-            <div class="p-5 border border-blue-200 rounded-xl bg-blue-50">
+            <div v-if="availableDocs.length > 0" class="p-5 border border-blue-200 rounded-xl bg-blue-50 mt-4">
               <h3 class="font-bold text-blue-900 text-sm mb-3">Document Dispatch Center</h3>
               
               <div class="flex gap-4 mb-4">
-                <label class="flex items-center gap-2 cursor-pointer">
+                <label v-if="availableDocs.includes('NDA')" class="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" value="NDA" v-model="selectedDocs" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
                   <span class="text-sm font-bold text-gray-700">Include NDA</span>
                 </label>
-                <label class="flex items-center gap-2 cursor-pointer">
+                <label v-if="availableDocs.includes('SOW')" class="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" value="SOW" v-model="selectedDocs" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
                   <span class="text-sm font-bold text-gray-700">Include SOW</span>
                 </label>
@@ -240,7 +248,7 @@
               </button>
             </div>
 
-            <div v-if="project.client.nda_pdf_path || project.client.sow_pdf_path" class="pt-4 border-t border-gray-200 space-y-2">
+            <div v-if="project.client.nda_pdf_path || project.client.sow_pdf_path" class="pt-6 border-t border-gray-200 space-y-2 mt-4">
               <button v-if="project.client.nda_pdf_path" @click="downloadFromVault(project.client.nda_pdf_path)" class="w-full bg-green-50 text-green-700 py-2 rounded-lg text-sm font-bold border border-green-200 hover:bg-green-100 transition-colors flex justify-center gap-2">
                 ⬇️ Download Signed NDA
               </button>
@@ -282,15 +290,17 @@
           </div>
 
           <div>
-            <label class="block text-[11px] font-bold text-gray-500 uppercase mb-1 flex justify-between">
-              <span>Message Body (HTML Format)</span>
-              <span class="text-blue-500 normal-case font-medium">Links are styled as buttons</span>
-            </label>
-            <textarea 
-              v-model="emailData.body" 
-              rows="12" 
-              class="w-full border border-gray-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none leading-relaxed font-mono bg-gray-50 whitespace-pre"
-            ></textarea>
+            <div class="flex justify-between items-center mb-1.5">
+              <label class="block text-[11px] font-bold text-gray-500 uppercase">Message Body</label>
+              <div class="flex bg-gray-100 rounded-md p-0.5">
+                <button type="button" @click="emailViewMode = 'preview'" :class="['px-3 py-1 text-[10px] font-bold uppercase rounded-sm transition-colors', emailViewMode === 'preview' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700']">Preview</button>
+                <button type="button" @click="emailViewMode = 'code'" :class="['px-3 py-1 text-[10px] font-bold uppercase rounded-sm transition-colors', emailViewMode === 'code' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700']">HTML Edit</button>
+              </div>
+            </div>
+            
+            <div v-if="emailViewMode === 'preview'" class="w-full border border-gray-300 rounded-lg p-5 text-sm bg-white overflow-y-auto max-h-[300px] shadow-inner" v-html="emailData.body"></div>
+            
+            <textarea v-else v-model="emailData.body" rows="12" class="w-full border border-gray-300 rounded-lg p-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none leading-relaxed font-mono bg-gray-800 text-green-400 whitespace-pre shadow-inner max-h-[300px]"></textarea>
           </div>
         </div>
 
@@ -344,15 +354,6 @@ All payments are non-refundable once Services have commenced.
 Any Services outside the defined Deliverables shall be billed at $[INSERT RATE] or pursuant to a separate written agreement.
 Failure to make timely payment may result in suspension of Services without liability.`;
 
-// Inyección Automática de Templates al abrir el modal
-watch(() => props.isOpen, (newVal) => {
-  if (newVal && props.project?.client) {
-    if (!props.project.client.sow_deliverables) props.project.client.sow_deliverables = defaultDeliverables;
-    if (!props.project.client.sow_timeline) props.project.client.sow_timeline = defaultTimeline;
-    if (!props.project.client.sow_fees_payment) props.project.client.sow_fees_payment = defaultFees;
-  }
-}, { immediate: true });
-
 const activeTab = ref('Overview')
 const stages = [
   'Directory View', 
@@ -360,6 +361,34 @@ const stages = [
   'Contracts Signed', 'Invoice Paid', 'Follow Up Needed', 
   'Churn', 'Project Complete', 'Future Project Opp'
 ]
+
+// Lógica de Documentos Disponibles Dinámicamente
+const availableDocs = computed(() => {
+  const docs = []
+  const ndaStatus = props.project?.client?.nda_status
+  const sowStatus = props.project?.client?.sow_status
+  
+  if (ndaStatus !== 'Sent' && ndaStatus !== 'Signed') docs.push('NDA')
+  if (sowStatus !== 'Sent' && sowStatus !== 'Signed') docs.push('SOW')
+  
+  return docs
+})
+
+const selectedDocs = ref([])
+
+// Inyección Automática de Templates y Checkboxes
+watch(() => props.isOpen, (newVal) => {
+  if (newVal && props.project?.client) {
+    if (!props.project.client.sow_deliverables) props.project.client.sow_deliverables = defaultDeliverables;
+    if (!props.project.client.sow_timeline) props.project.client.sow_timeline = defaultTimeline;
+    if (!props.project.client.sow_fees_payment) props.project.client.sow_fees_payment = defaultFees;
+    
+    // Auto-seleccionar los documentos disponibles
+    selectedDocs.value = [...availableDocs.value];
+    // Reiniciar vista del correo a preview
+    emailViewMode.value = 'preview';
+  }
+}, { immediate: true });
 
 const suggestedAction = computed(() => {
   const p = props.project
@@ -435,9 +464,9 @@ const updateOverview = async () => {
 }
 
 const showEmailModal = ref(false)
+const emailViewMode = ref('preview') // Modo por defecto: Preview
 const isSendingEmail = ref(false)
 const emailData = ref({ subject: '', body: '' })
-const selectedDocs = ref(['NDA', 'SOW'])
 
 const saveAndPrepareEmail = async () => {
   if (!props.project?.client) return
@@ -467,6 +496,7 @@ const openEmailEditor = (docsToInclude) => {
   let docsText = docsToInclude.join(' and ')
   emailData.value.subject = `Document Request: ${docsText} from SIINGE STUDIO`
 
+  // Generación del HTML con diseño limpio para el correo
   let htmlBody = `<p style="font-family: sans-serif; color: #374151;">Hi ${clientName},</p>
 
 <p style="font-family: sans-serif; color: #374151;">Please review and sign the requested documents for our upcoming collaboration.</p>
@@ -490,6 +520,7 @@ const openEmailEditor = (docsToInclude) => {
 
   emailData.value.body = htmlBody
   showEmailModal.value = true
+  emailViewMode.value = 'preview'
 }
 
 const dispatchEmail = async () => {
@@ -498,6 +529,7 @@ const dispatchEmail = async () => {
     const sentDate = new Date().toISOString()
     const updates = {}
 
+    // Marcar como enviados los seleccionados
     if (selectedDocs.value.includes('NDA')) {
       updates.nda_status = 'Sent'
       updates.nda_sent_date = sentDate
