@@ -273,6 +273,10 @@ const drawTouch = (e) => draw(e)
 const stopDrawing = () => { isDrawing.value = false; ctx.value?.closePath() }
 const clearSignature = () => { ctx.value.clearRect(0,0,sigCanvas.value.width,sigCanvas.value.height); hasDrawn.value = false }
 
+watch(sigCanvas, (canvas) => {
+  if (canvas) initCanvas()
+})
+
 watch(form, () => {
   if (!isSigned.value) {
     generateLivePDFPreview()
