@@ -1,24 +1,24 @@
 <template>
-  <div class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-      
-      <div class="px-8 py-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(14,14,12,0.45);">
+    <div class="w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]" style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; box-shadow: var(--shadow-3);">
+
+      <div class="flex justify-between items-center" style="padding: 20px 32px; border-bottom: 1px solid var(--bone-edge); background: var(--ink);">
         <div>
-          <h3 class="font-bold text-xl text-gray-800 uppercase tracking-tight">
+          <h3 style="font-family: var(--font-display); font-style: italic; font-weight: 400; font-size: 22px; color: var(--paper); margin: 0 0 2px; letter-spacing: -0.02em;">
             {{ step === 1 ? 'Step 1: Prepare Documents' : 'Step 2: Dispatch' }}
           </h3>
-          <p class="text-xs text-gray-500 font-medium">
+          <p style="font-size: 11px; color: rgba(250,247,242,0.5); margin: 0;">
             {{ step === 1 ? 'Fill out the specific contract details' : 'Review and edit email before sending' }}
           </p>
         </div>
-        <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+        <button @click="$emit('close')" style="color: rgba(250,247,242,0.5); background: none; border: none; font-size: 22px; cursor: pointer; line-height: 1; padding: 0;">&times;</button>
       </div>
 
       <div class="p-8 overflow-y-auto space-y-8">
         
         <div v-if="step === 1" class="space-y-8">
           <div class="space-y-4">
-            <h4 class="text-xs font-bold text-blue-600 uppercase tracking-widest">General Information</h4>
+            <h4 style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3);">General Information</h4>
             <div>
               <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Legal Company Name</label>
               <input v-model="clientData.company" type="text" placeholder="e.g. Acme Corporation LLC" class="w-full border border-gray-300 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
@@ -26,7 +26,7 @@
           </div>
 
           <div v-if="selection.types.includes('sow')" class="space-y-4">
-            <h4 class="text-xs font-bold text-blue-600 uppercase tracking-widest">Scope of Work Details</h4>
+            <h4 style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3);">Scope of Work Details</h4>
             <div class="space-y-4">
               <div>
                 <label class="block text-sm font-bold text-gray-700 mb-1">Deliverables</label>
@@ -45,12 +45,12 @@
         </div>
 
         <div v-if="step === 2" class="space-y-6">
-          <div class="p-4 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm font-medium">
-            ✅ Data saved securely! You can edit the email below before sending.
+          <div style="padding: 12px 16px; background: var(--positive-soft); border: 1px solid #B8C4A0; border-radius: 2px; font-size: 13px; color: var(--positive); font-weight: 600;">
+            Data saved securely. You can edit the email below before sending.
           </div>
 
           <div class="space-y-4">
-            <h4 class="text-xs font-bold text-blue-600 uppercase tracking-widest">Email Composer</h4>
+            <h4 style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3);">Email Composer</h4>
             
             <div class="space-y-4 border border-gray-200 rounded-xl p-6 bg-slate-50">
               <div>
@@ -86,15 +86,19 @@
 
       </div>
 
-      <div class="px-8 py-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-        <button v-if="step === 1" @click="$emit('close')" class="px-6 py-2.5 text-gray-500 font-bold hover:bg-gray-100 rounded-xl transition-colors">Cancel</button>
-        
-        <button v-if="step === 1" @click="saveDataAndGenerate" :disabled="loading" class="px-8 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg transition-all flex items-center gap-2">
+      <div class="flex justify-end gap-3" style="padding: 16px 32px; border-top: 1px solid var(--bone-edge); background: var(--paper-2);">
+        <button v-if="step === 1" @click="$emit('close')" style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 20px; background: transparent; color: var(--ink); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer;">Cancel</button>
+
+        <button v-if="step === 1" @click="saveDataAndGenerate" :disabled="loading"
+          style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 24px; background: var(--ink); color: var(--paper); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer; transition: opacity 120ms;"
+          :style="loading ? 'opacity: 0.5;' : ''">
           {{ loading ? 'Saving...' : 'Save & Prepare Email' }}
         </button>
 
-        <button v-if="step === 2" @click="sendWithSupabaseFunction" :disabled="loading" class="px-8 py-2.5 bg-black text-white font-bold rounded-xl hover:bg-gray-800 shadow-lg transition-all flex items-center gap-2">
-          <svg v-if="!loading" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+        <button v-if="step === 2" @click="sendWithSupabaseFunction" :disabled="loading"
+          style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 24px; background: var(--ember); color: #fff; border: 1px solid var(--ember); border-radius: 2px; cursor: pointer; transition: opacity 120ms; display: inline-flex; align-items: center; gap: 8px;"
+          :style="loading ? 'opacity: 0.5;' : ''">
+          <svg v-if="!loading" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/></svg>
           {{ loading ? 'Dispatching...' : 'Send Official Email' }}
         </button>
       </div>
@@ -118,7 +122,7 @@ const clientData = ref({ name: '', email: '', company: '', sow_deliverables: '',
 // SEPARACIÓN DE MENSAJE Y BOTONES PARA QUE SEA EDITABLE
 const email = ref({ subject: '', messageBody: '', buttonsHtml: '' })
 
-const defaultDeliverables = "Service Provider will deliver the following:\n• [INSERT DELIVERABLES]\n• [Be specific: outputs, formats, quantities]\n• [Include anything that defines scope clearly]\nAny work not expressly listed above is considered out of scope"
+const defaultDeliverables = "Service Provider will deliver the following:\n• [INSERT DELIVERABLES]\n• [Be specific: outputs, formats, quantities]\n• [Include anything that defines scope clearly]\nAny work not expressly listed above is considered out of scope."
 const defaultTimeline = "• Project Start Date: [INSERT]\n• Key Milestones (optional): [INSERT]\n• Final Delivery Date: [INSERT]\nTimeline is dependent on timely client feedback, approvals, and provision of required materials."
 const defaultFees = "Total Project Fee: $[INSERT]\nPayment Terms:\n• [INSERT STRUCTURE]\nPayment is a condition precedent to commencement of Services. No work shall begin until\npayment has been received.\nAll payments are non-refundable once Services have commenced.\nAny Services outside the defined Deliverables shall be billed at $[INSERT RATE] or pursuant to\na separate written agreement.\nFailure to make timely payment may result in suspension of Services without liability."
 

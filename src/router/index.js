@@ -15,7 +15,7 @@ const routes = [
       { path: '', name: 'Dashboard', component: Dashboard },
       { path: 'pipeline', name: 'Pipeline', component: Pipeline },
       { path: 'clients', name: 'Clients', component: Clients },
-      { path: 'contracts', name: 'Contracts', component: Contracts }
+      { path: 'logs', name: 'Logs', component: Contracts }
     ]
   },
   {

@@ -1,50 +1,58 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-    <div class="max-w-md w-full bg-white p-10 rounded-2xl shadow-sm border border-gray-100">
-      
+  <div class="min-h-screen flex items-center justify-center px-4" style="background: var(--paper);">
+    <div class="w-full max-w-md" style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; padding: 48px 40px;">
+
       <div class="text-center mb-10">
-        <h1 class="text-2xl font-bold tracking-tighter uppercase text-black">Siinge Studio</h1>
-        <p class="text-xs text-gray-400 font-medium mt-1 tracking-widest uppercase text-center">Internal CRM Access</p>
+        <img src="../assets/siinge-logo.png" alt="SIINGE" style="height: 40px; margin: 0 auto 24px;" />
+        <h1 style="font-family: var(--font-display); font-style: italic; font-weight: 400; font-size: 32px; color: var(--ink); margin: 0 0 8px;">Welcome back.</h1>
+        <p style="font-size: 13px; color: var(--ink-3); letter-spacing: 0.02em; margin: 0;">Internal CRM Access</p>
       </div>
 
-      <form @submit.prevent="handleLogin" class="space-y-6">
+      <form @submit.prevent="handleLogin" class="space-y-5">
         <div>
-          <label class="block text-[10px] font-bold text-gray-400 uppercase mb-2 tracking-widest">Email Address</label>
-          <input 
-            v-model="email" 
-            type="email" 
+          <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Email Address</label>
+          <input
+            v-model="email"
+            type="email"
             required
             placeholder="admin@siinge.studio"
-            class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black focus:ring-0 outline-none transition-all text-sm bg-gray-50/50"
+            style="width: 100%; box-sizing: border-box; padding: 11px 14px; background: var(--paper); border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 14px; color: var(--ink); outline: none; transition: border-color 120ms;"
+            @focus="e => e.target.style.borderColor = 'var(--ink)'"
+            @blur="e => e.target.style.borderColor = 'var(--ink-5)'"
           />
         </div>
 
         <div>
-          <label class="block text-[10px] font-bold text-gray-400 uppercase mb-2 tracking-widest">Password</label>
-          <input 
-            v-model="password" 
-            type="password" 
+          <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Password</label>
+          <input
+            v-model="password"
+            type="password"
             required
             placeholder="••••••••"
-            class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black focus:ring-0 outline-none transition-all text-sm bg-gray-50/50"
+            style="width: 100%; box-sizing: border-box; padding: 11px 14px; background: var(--paper); border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 14px; color: var(--ink); outline: none; transition: border-color 120ms;"
+            @focus="e => e.target.style.borderColor = 'var(--ink)'"
+            @blur="e => e.target.style.borderColor = 'var(--ink-5)'"
           />
         </div>
 
-        <div v-if="error" class="text-red-500 text-xs font-bold bg-red-50 p-3 rounded-lg border border-red-100">
+        <div v-if="error" style="font-size: 12px; font-weight: 600; color: var(--critical); background: var(--critical-soft); border: 1px solid var(--critical); border-radius: 2px; padding: 10px 14px;">
           {{ error }}
         </div>
 
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           :disabled="loading"
-          class="w-full bg-black text-white font-bold py-4 rounded-xl hover:bg-gray-900 transition-all text-sm shadow-lg disabled:opacity-50"
+          style="width: 100%; height: 48px; background: var(--ink); color: var(--paper); font-family: var(--font-sans); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; border: none; border-radius: 2px; cursor: pointer; transition: opacity 120ms;"
+          :style="loading ? 'opacity: 0.5; cursor: not-allowed;' : ''"
+          @mouseenter="e => !loading && (e.target.style.opacity = '0.85')"
+          @mouseleave="e => !loading && (e.target.style.opacity = '1')"
         >
           {{ loading ? 'VERIFYING...' : 'SIGN IN' }}
         </button>
       </form>
 
-      <div class="mt-8 pt-8 border-t border-gray-50 text-center">
-        <p class="text-[10px] text-gray-300 font-medium uppercase tracking-widest">Authorized Personnel Only</p>
+      <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--ink-5); text-align: center;">
+        <p style="font-size: 10px; color: var(--ink-4); font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; margin: 0;">Authorized Personnel Only</p>
       </div>
     </div>
   </div>

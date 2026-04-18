@@ -346,6 +346,13 @@ const submitDocument = async () => {
       throw dbError;
     }
 
+    await supabase.from('activity_logs').insert({
+      event_type: isNDA.value ? 'nda_signed' : 'sow_signed',
+      client_id: client.value.id,
+      client_name: client.value.name,
+      notes: `Signed by ${form.value.client_name} (${form.value.client_title})`
+    })
+
     console.log("Todo completado con éxito.");
     await fetchDocument() 
   } catch (error) { 

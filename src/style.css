@@ -1,9 +1,5 @@
+@import './styles/siinge-tokens.css';
 @import "tailwindcss";
-
-:root {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: #f3f4f6;
-}
 
 body {
   margin: 0;

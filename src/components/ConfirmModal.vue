@@ -1,27 +1,35 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden animate-scale-in">
-      <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
-        <h3 class="text-white font-bold text-lg">{{ title }}</h3>
-      </div>
-      
-      <div class="p-6">
-        <p class="text-gray-700 text-base leading-relaxed">{{ message }}</p>
+  <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(14,14,12,0.4);">
+    <div class="max-w-md w-full overflow-hidden" style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; box-shadow: var(--shadow-3);" :class="'animate-scale-in'">
+
+      <!-- Header -->
+      <div style="background: var(--ink); padding: 20px 24px;">
+        <h3 style="font-family: var(--font-display); font-style: italic; font-weight: 400; font-size: 22px; color: var(--paper); margin: 0; line-height: 1.2;">{{ title }}</h3>
       </div>
 
-      <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
-        <button 
+      <!-- Body -->
+      <div style="padding: 24px; background: var(--bone);">
+        <p style="font-size: 14px; color: var(--ink-2); line-height: 1.6; margin: 0;">{{ message }}</p>
+      </div>
+
+      <!-- Actions -->
+      <div style="padding: 16px 24px; background: var(--paper-2); border-top: 1px solid var(--bone-edge); display: flex; justify-content: flex-end; gap: 8px;">
+        <button
           @click="handleCancel"
-          class="px-4 py-2 text-gray-700 font-semibold hover:bg-gray-200 rounded-lg transition-colors"
+          style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 16px; background: transparent; color: var(--ink); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer; transition: opacity 120ms;"
+          @mouseenter="e => e.target.style.opacity = '0.7'"
+          @mouseleave="e => e.target.style.opacity = '1'"
         >
           {{ cancelText }}
         </button>
-        <button 
+        <button
           @click="handleConfirm"
-          :class="[
-            'px-4 py-2 text-white font-semibold rounded-lg transition-colors',
-            isDangerous ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
-          ]"
+          :style="isDangerous
+            ? 'background: var(--critical); border-color: var(--critical);'
+            : 'background: var(--ink); border-color: var(--ink);'"
+          style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 16px; color: var(--paper); border: 1px solid; border-radius: 2px; cursor: pointer; transition: opacity 120ms;"
+          @mouseenter="e => e.target.style.opacity = '0.85'"
+          @mouseleave="e => e.target.style.opacity = '1'"
         >
           {{ confirmText }}
         </button>
@@ -68,17 +76,10 @@ defineExpose({ open })
 
 <style scoped>
 @keyframes scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
 }
-
 .animate-scale-in {
-  animation: scale-in 0.2s ease-out;
+  animation: scale-in 0.18s ease-out;
 }
 </style>

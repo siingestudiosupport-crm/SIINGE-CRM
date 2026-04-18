@@ -1,80 +1,80 @@
 <template>
-  <div class="bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col h-full relative">
-    
-    <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+  <div class="flex flex-col h-full relative" style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px;">
+
+    <!-- Page header -->
+    <div class="flex justify-between items-center" style="padding: 20px 24px; border-bottom: 1px solid var(--ink);">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">Clients Directory</h1>
-        <p class="text-gray-500 text-sm mt-1">Manage your leads and active clients.</p>
+        <h1 style="font-family: var(--font-display); font-style: italic; font-weight: 400; font-size: 28px; color: var(--ink); margin: 0 0 4px; letter-spacing: -0.02em;">Clients Directory</h1>
+        <p style="font-size: 13px; color: var(--ink-3); margin: 0;">Manage your leads and active clients.</p>
       </div>
-      <button 
+      <button
         @click="openModal()"
-        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm cursor-pointer"
-      >
-        + Add Client
-      </button>
+        style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 16px; background: var(--ink); color: var(--paper); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer; transition: opacity 120ms;"
+        @mouseenter="e => e.target.style.opacity = '0.85'"
+        @mouseleave="e => e.target.style.opacity = '1'"
+      >+ Add Client</button>
     </div>
 
-    <div v-if="loading" class="p-8 text-center text-gray-500">
+    <div v-if="loading" class="p-8 text-center" style="color: var(--ink-4);">
       Loading clients...
     </div>
 
     <div v-else class="overflow-x-auto">
-      <table class="w-full text-left border-collapse">
+      <table class="w-full text-left" style="border-collapse: collapse;">
         <thead>
-          <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
-            <th class="p-4 font-semibold">Name & Contact</th>
-            <th class="p-4 font-semibold">Company</th>
-            <th class="p-4 font-semibold">Contracts</th>
-            <th class="p-4 font-semibold">Join Date</th>
-            <th class="p-4 font-semibold text-center">Actions</th>
+          <tr style="background: var(--paper-2); border-bottom: 1px solid var(--ink);">
+            <th style="padding: 10px 16px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3);">Name & Contact</th>
+            <th style="padding: 10px 16px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3);">Company</th>
+            <th style="padding: 10px 16px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3);">Contracts</th>
+            <th style="padding: 10px 16px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3);">Join Date</th>
+            <th style="padding: 10px 16px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); text-align: center;">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="clients.length === 0">
-            <td colspan="5" class="p-8 text-center text-gray-500">No clients registered yet.</td>
+            <td colspan="5" style="padding: 32px; text-align: center; color: var(--ink-4); font-size: 13px;">No clients registered yet.</td>
           </tr>
-          
-          <tr v-for="client in clients" :key="client.id" 
+
+          <tr v-for="client in clients" :key="client.id"
               @click="openClientDetail(client)"
-              class="border-b border-gray-100 hover:bg-blue-50/50 transition-colors cursor-pointer group">
-            <td class="p-4">
-              <div class="font-bold text-gray-800 group-hover:text-blue-600">{{ client.name }}</div>
-              <div class="text-xs text-gray-400 font-medium">{{ client.email }}</div>
-              <div v-if="client.phone_number" class="text-[11px] text-gray-500 mt-1.5 flex items-center gap-1.5 font-medium bg-gray-50 border border-gray-100 w-max px-2 py-0.5 rounded-md">
+              style="border-bottom: 1px solid var(--ink-5); cursor: pointer; transition: background 100ms;"
+              @mouseenter="e => e.currentTarget.style.background = 'var(--paper)'"
+              @mouseleave="e => e.currentTarget.style.background = 'transparent'"
+          >
+            <td style="padding: 14px 16px;">
+              <div style="font-family: var(--font-display); font-style: italic; font-size: 19px; color: var(--ink); line-height: 1.2; letter-spacing: -0.01em;">{{ client.name }}</div>
+              <div style="font-size: 11px; color: var(--ink-4); margin-top: 2px;">{{ client.email }}</div>
+              <div v-if="client.phone_number" style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--ink-3); margin-top: 4px; padding: 2px 6px; border: 1px solid var(--ink-5); border-radius: 2px;">
                 <span v-if="client.country">{{ client.country }}</span>
-                <span v-if="client.country" class="text-gray-300">|</span>
-                <span>📞 {{ client.phone_number }}</span>
+                <span v-if="client.country" style="color: var(--ink-5);">|</span>
+                <span>{{ client.phone_number }}</span>
               </div>
             </td>
-            <td class="p-4 text-gray-600 text-sm">
+            <td style="padding: 14px 16px; font-size: 13px; color: var(--ink-2);">
               {{ client.company || 'N/A' }}
-              <div v-if="client.investment_level && client.investment_level !== 'No especificado'" class="text-xs text-green-600 mt-1 font-semibold flex items-center gap-1">
+              <div v-if="client.investment_level && client.investment_level !== 'No especificado'" style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--positive); margin-top: 4px; font-weight: 600;">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                 Strategy Call
               </div>
             </td>
-            
-            <td class="p-4">
+            <td style="padding: 14px 16px;">
               <div class="flex flex-col gap-1">
-                <span v-if="client.nda_status" :class="['text-[8px] px-1.5 py-0.5 rounded font-bold uppercase w-max', getStatusClass(client.nda_status)]">
-                  NDA: {{ client.nda_status }}
-                </span>
-                <span v-if="client.sow_status" :class="['text-[8px] px-1.5 py-0.5 rounded font-bold uppercase w-max', getStatusClass(client.sow_status)]">
-                  SOW: {{ client.sow_status }}
-                </span>
+                <span v-if="client.nda_status" :style="getStatusChipStyle(client.nda_status)">NDA: {{ client.nda_status }}</span>
+                <span v-if="client.sow_status" :style="getStatusChipStyle(client.sow_status)">SOW: {{ client.sow_status }}</span>
               </div>
             </td>
-
-            <td class="p-4 text-gray-500 text-xs">
+            <td style="padding: 14px 16px; font-family: var(--font-mono); font-size: 11px; color: var(--ink-4);">
               {{ new Date(client.created_at).toLocaleDateString() }}
             </td>
-            
-            <td class="p-4 text-center">
+            <td style="padding: 14px 16px; text-align: center;">
               <div class="flex justify-center gap-2" @click.stop>
-                <button @click="openModal(client)" class="p-1.5 text-gray-400 hover:text-blue-600 transition-colors" title="Edit">
+                <button @click="openAddProject(client)" style="padding: 6px; color: var(--ink-4); background: none; border: none; cursor: pointer; border-radius: 2px; transition: color 120ms;" @mouseenter="e=>e.currentTarget.style.color='var(--positive)'" @mouseleave="e=>e.currentTarget.style.color='var(--ink-4)'" title="Add Project">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                </button>
+                <button @click="openModal(client)" style="padding: 6px; color: var(--ink-4); background: none; border: none; cursor: pointer; border-radius: 2px; transition: color 120ms;" @mouseenter="e=>e.currentTarget.style.color='var(--ink)'" @mouseleave="e=>e.currentTarget.style.color='var(--ink-4)'" title="Edit">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
-                <button @click="confirmDelete(client)" class="p-1.5 text-gray-400 hover:text-red-600 transition-colors" title="Delete">
+                <button @click="confirmDelete(client)" style="padding: 6px; color: var(--ink-4); background: none; border: none; cursor: pointer; border-radius: 2px; transition: color 120ms;" @mouseenter="e=>e.currentTarget.style.color='var(--critical)'" @mouseleave="e=>e.currentTarget.style.color='var(--ink-4)'" title="Delete">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
               </div>
@@ -84,63 +84,60 @@
       </table>
     </div>
 
-    <div v-if="showModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60] overflow-y-auto">
-      <div class="bg-white rounded-xl shadow-lg w-full max-w-2xl overflow-hidden animate-slide-up my-8">
-        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-          <h3 class="text-lg font-bold text-gray-800">{{ editingId ? 'Edit Client' : 'New Client' }}</h3>
-          <button @click="closeModal" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+    <!-- Edit/Add Client Modal -->
+    <div v-if="showModal" class="fixed inset-0 flex items-center justify-center p-4 z-[60] overflow-y-auto" style="background: rgba(14,14,12,0.45);">
+      <div class="w-full max-w-2xl overflow-hidden my-8" style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px;" :class="'animate-slide-up'">
+        <div class="flex justify-between items-center" style="padding: 16px 24px; border-bottom: 1px solid var(--bone-edge); background: var(--ink);">
+          <h3 style="font-family: var(--font-display); font-style: italic; font-size: 20px; font-weight: 400; color: var(--paper); margin: 0;">{{ editingId ? 'Edit Client' : 'New Client' }}</h3>
+          <button @click="closeModal" style="color: rgba(250,247,242,0.6); background: none; border: none; font-size: 24px; cursor: pointer; line-height: 1; padding: 0;">&times;</button>
         </div>
-        
         <form @submit.prevent="saveClient" class="p-6">
           <div class="grid grid-cols-2 gap-4">
             <div class="col-span-2 md:col-span-1">
-              <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name</label>
-              <input v-model="form.name" type="text" required class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+              <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Full Name</label>
+              <input v-model="form.name" type="text" required style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" />
             </div>
             <div class="col-span-2 md:col-span-1">
-              <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label>
-              <input v-model="form.email" type="email" required class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
-            </div>
-            
-            <div class="col-span-2 md:col-span-1">
-              <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Company</label>
-              <input v-model="form.company" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+              <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Email</label>
+              <input v-model="form.email" type="email" required style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" />
             </div>
             <div class="col-span-2 md:col-span-1">
-              <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Phone Number</label>
-              <input v-model="form.phone_number" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="+1 234 567 8900" />
+              <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Company</label>
+              <input v-model="form.company" type="text" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" />
             </div>
-
-            <div class="col-span-2 border-t border-gray-200 pt-4 mt-2">
-              <h4 class="text-sm font-bold text-gray-800 mb-4">Strategy Call Details</h4>
+            <div class="col-span-2 md:col-span-1">
+              <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Phone Number</label>
+              <input v-model="form.phone_number" type="text" placeholder="+1 234 567 8900" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" />
+            </div>
+            <div class="col-span-2" style="border-top: 1px solid var(--ink-5); padding-top: 16px; margin-top: 4px;">
+              <h4 style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-3); margin: 0 0 16px;">Strategy Call Details</h4>
               <div class="grid grid-cols-2 gap-4">
                 <div class="col-span-2 md:col-span-1">
-                  <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Brand Stage</label>
-                  <input v-model="form.brand_stage" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                  <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Brand Stage</label>
+                  <input v-model="form.brand_stage" type="text" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" />
                 </div>
                 <div class="col-span-2 md:col-span-1">
-                  <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Investment Level</label>
-                  <input v-model="form.investment_level" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                  <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Investment Level</label>
+                  <input v-model="form.investment_level" type="text" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" />
                 </div>
                 <div class="col-span-2 md:col-span-1">
-                  <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Timeline</label>
-                  <input v-model="form.development_timeline" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                  <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Timeline</label>
+                  <input v-model="form.development_timeline" type="text" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" />
                 </div>
                 <div class="col-span-2 md:col-span-1">
-                  <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Support Level</label>
-                  <input v-model="form.support_level" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                  <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Support Level</label>
+                  <input v-model="form.support_level" type="text" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" />
                 </div>
                 <div class="col-span-2">
-                  <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Primary Issue / Need</label>
-                  <textarea v-model="form.primary_issue" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm"></textarea>
+                  <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Primary Issue / Need</label>
+                  <textarea v-model="form.primary_issue" rows="2" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none; resize: vertical;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'"></textarea>
                 </div>
               </div>
             </div>
           </div>
-
-          <div class="pt-6 flex justify-end gap-3 border-t border-gray-100 mt-6">
-            <button type="button" @click="closeModal" class="px-4 py-2 text-gray-500 font-bold hover:bg-gray-50 rounded-lg">Cancel</button>
-            <button type="submit" :disabled="isSubmitting" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-md">
+          <div class="flex justify-end gap-3" style="padding-top: 20px; border-top: 1px solid var(--ink-5); margin-top: 20px;">
+            <button type="button" @click="closeModal" style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 16px; background: transparent; color: var(--ink); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer;">Cancel</button>
+            <button type="submit" :disabled="isSubmitting" style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 20px; background: var(--ink); color: var(--paper); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer;" :style="isSubmitting ? 'opacity: 0.5;' : ''">
               {{ isSubmitting ? 'Saving...' : 'Save Changes' }}
             </button>
           </div>
@@ -148,10 +145,63 @@
       </div>
     </div>
 
-    <ProjectDetail 
+    <!-- Add Project Modal -->
+    <div v-if="showAddProjectModal" class="fixed inset-0 flex items-center justify-center p-4 z-[70]" style="background: rgba(14,14,12,0.45);">
+      <div class="w-full max-w-lg overflow-hidden" style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px;" :class="'animate-slide-up'">
+        <div class="flex justify-between items-center" style="padding: 16px 24px; border-bottom: 1px solid var(--bone-edge); background: var(--ink);">
+          <div>
+            <h3 style="font-family: var(--font-display); font-style: italic; font-size: 20px; font-weight: 400; color: var(--paper); margin: 0 0 2px;">Add Project</h3>
+            <p style="font-size: 11px; color: rgba(250,247,242,0.5); margin: 0;">for {{ targetClient?.name }}</p>
+          </div>
+          <button @click="showAddProjectModal = false" style="color: rgba(250,247,242,0.6); background: none; border: none; font-size: 24px; cursor: pointer; line-height: 1; padding: 0;">&times;</button>
+        </div>
+        <form @submit.prevent="saveProject" class="p-6 space-y-4">
+          <div>
+            <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Project Name *</label>
+            <input v-model="projectForm.title" type="text" required placeholder="e.g. Brand Identity Redesign" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" />
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">$ Paid</label>
+              <div style="display: flex; align-items: center; border: 1px solid var(--ink-5); border-radius: 2px; background: var(--paper); padding: 0 10px;">
+                <span style="color: var(--ink-3); font-size: 13px; margin-right: 4px;">$</span>
+                <input v-model="projectForm.amount_paid" type="number" min="0" step="0.01" placeholder="0" style="flex: 1; border: none; background: transparent; padding: 9px 0; font-family: var(--font-sans); font-size: 13px; color: var(--ink); outline: none;" />
+              </div>
+            </div>
+            <div>
+              <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">$ Owed</label>
+              <div style="display: flex; align-items: center; border: 1px solid var(--ink-5); border-radius: 2px; background: var(--paper); padding: 0 10px;">
+                <span style="color: var(--ink-3); font-size: 13px; margin-right: 4px;">$</span>
+                <input v-model="projectForm.amount_owed" type="number" min="0" step="0.01" placeholder="0" style="flex: 1; border: none; background: transparent; padding: 9px 0; font-family: var(--font-sans); font-size: 13px; color: var(--ink); outline: none;" />
+              </div>
+            </div>
+          </div>
+          <div>
+            <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Milestones</label>
+            <textarea v-model="projectForm.milestones" rows="3" placeholder="• Phase 1: Discovery&#10;• Phase 2: Design&#10;• Phase 3: Delivery" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none; resize: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'"></textarea>
+          </div>
+          <div>
+            <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Due Date</label>
+            <input v-model="projectForm.due_date" type="date" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" />
+          </div>
+          <label class="flex items-center gap-3" style="padding: 10px 12px; border: 1px solid var(--ink-5); border-radius: 2px; cursor: pointer; background: var(--paper);">
+            <input type="checkbox" v-model="projectForm.in_menu_hub" style="width: 14px; height: 14px; accent-color: var(--ink);" />
+            <span style="font-size: 13px; color: var(--ink-2);">Added to Menu Hub</span>
+          </label>
+          <div class="flex justify-end gap-3" style="padding-top: 12px; border-top: 1px solid var(--ink-5);">
+            <button type="button" @click="showAddProjectModal = false" style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 16px; background: transparent; color: var(--ink); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer;">Cancel</button>
+            <button type="submit" :disabled="isSavingProject" style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 20px; background: var(--ink); color: var(--paper); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer;" :style="isSavingProject ? 'opacity: 0.5;' : ''">
+              {{ isSavingProject ? 'Creating...' : 'Create Project' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <ProjectDetail
       v-if="selectedProject"
-      :is-open="isDetailOpen" 
-      :project="selectedProject" 
+      :is-open="isDetailOpen"
+      :project="selectedProject"
       @close="isDetailOpen = false"
       @updated="fetchClients"
     />
@@ -164,7 +214,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useConfirmModal } from '../composables/useConfirmModal'
 import ProjectDetail from '../components/ProjectDetail.vue'
 
-const { confirm: showConfirm, alert: showAlert } = useConfirmModal() 
+const { confirm: showConfirm, alert: showAlert } = useConfirmModal()
 
 const clients = ref([])
 const loading = ref(true)
@@ -175,15 +225,58 @@ const editingId = ref(null)
 const isDetailOpen = ref(false)
 const selectedProject = ref(null)
 
-const form = ref({ 
+const showAddProjectModal = ref(false)
+const isSavingProject = ref(false)
+const targetClient = ref(null)
+const projectForm = ref({ title: '', amount_paid: null, amount_owed: null, milestones: '', due_date: '', in_menu_hub: false })
+
+const openAddProject = (client) => {
+  targetClient.value = client
+  projectForm.value = { title: '', amount_paid: null, amount_owed: null, milestones: '', due_date: '', in_menu_hub: false }
+  showAddProjectModal.value = true
+}
+
+const saveProject = async () => {
+  try {
+    isSavingProject.value = true
+    const { data: newProj, error } = await supabase.from('projects').insert([{
+      client_id: targetClient.value.id,
+      title: projectForm.value.title,
+      pipeline_stage: 'Intake Form Received',
+      amount_paid: projectForm.value.amount_paid || 0,
+      amount_owed: projectForm.value.amount_owed || 0,
+      milestones: projectForm.value.milestones || null,
+      due_date: projectForm.value.due_date || null,
+      in_menu_hub: projectForm.value.in_menu_hub,
+    }]).select().single()
+    if (error) throw error
+    await supabase.from('activity_logs').insert({
+      event_type: 'project_created',
+      client_id: targetClient.value.id,
+      client_name: targetClient.value.name,
+      project_id: newProj.id,
+      project_title: newProj.title,
+      notes: 'Stage: Intake Form Received'
+    })
+    showAddProjectModal.value = false
+    await showAlert(`Project "${projectForm.value.title}" created and added to the pipeline.`, 'Project Created')
+  } catch (err) {
+    await showAlert(err.message, 'Error')
+  } finally {
+    isSavingProject.value = false
+  }
+}
+
+const form = ref({
   name: '', email: '', company: '', phone_number: '', country: '', lead_source: 'Manual Entry',
   brand_stage: '', investment_level: '', development_timeline: '', support_level: '', primary_issue: ''
 })
 
-const getStatusClass = (status) => {
-  if (status === 'Signed') return 'bg-green-100 text-green-700 border border-green-200'
-  if (status === 'Sent') return 'bg-amber-100 text-amber-700 border border-amber-200'
-  return 'bg-gray-100 text-gray-700 border border-gray-200'
+const getStatusChipStyle = (status) => {
+  const base = 'display: inline-flex; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; padding: 3px 6px; border-radius: 2px; border: 1px solid; white-space: nowrap; width: max-content;'
+  if (status === 'Signed') return base + 'background: var(--positive-soft); color: var(--positive); border-color: #B8C4A0;'
+  if (status === 'Sent')   return base + 'background: var(--caution-soft); color: var(--caution); border-color: #DBC68A;'
+  return base + 'background: var(--paper-2); color: var(--ink-4); border-color: var(--ink-5);'
 }
 
 const fetchClients = async () => {
@@ -203,8 +296,8 @@ const openClientDetail = (client) => {
     client_id: client.id,
     pipeline_stage: 'Directory View',
     created_at: client.created_at,
-    scheduled_date: client.scheduled_date, 
-    meeting_link: client.meeting_link      
+    scheduled_date: client.scheduled_date,
+    meeting_link: client.meeting_link
   }
   isDetailOpen.value = true
 }
@@ -215,9 +308,9 @@ const openModal = (client = null) => {
     form.value = { ...client }
   } else {
     editingId.value = null
-    form.value = { 
+    form.value = {
       name: '', email: '', company: '', phone_number: '', country: '', lead_source: 'Manual Entry',
-      brand_stage: '', investment_level: '', development_timeline: '', support_level: '', primary_issue: '' 
+      brand_stage: '', investment_level: '', development_timeline: '', support_level: '', primary_issue: ''
     }
   }
   showModal.value = true
@@ -240,7 +333,7 @@ const saveClient = async () => {
     }
     closeModal()
     fetchClients()
-  } catch (err) { 
+  } catch (err) {
     await showAlert(err.message, 'Error')
   } finally { isSubmitting.value = false }
 }
@@ -258,7 +351,7 @@ const confirmDelete = async (client) => {
       const { error } = await supabase.from('clients').delete().eq('id', client.id)
       if (error) throw error
       fetchClients()
-    } catch (err) { 
+    } catch (err) {
       await showAlert(err.message, 'Error')
     }
   }
@@ -269,10 +362,10 @@ onMounted(fetchClients)
 
 <style scoped>
 .animate-slide-up {
-  animation: slideUp 0.3s ease-out;
+  animation: slideUp 0.22s ease-out;
 }
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 </style>
