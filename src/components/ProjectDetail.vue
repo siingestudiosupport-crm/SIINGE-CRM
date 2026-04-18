@@ -358,6 +358,16 @@
         </div>
 
       </div>
+
+      <div v-if="project?.id" class="flex-shrink-0 flex justify-between items-center" style="padding: 12px 24px; border-top: 1px solid var(--bone-edge); background: var(--paper-2);">
+        <button @click="deleteProject"
+          style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 8px 16px; background: transparent; color: var(--critical); border: 1px solid var(--critical); border-radius: 2px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: opacity 120ms;"
+          @mouseenter="e=>e.currentTarget.style.opacity='0.7'" @mouseleave="e=>e.currentTarget.style.opacity='1'">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          Delete Project
+        </button>
+      </div>
+
     </div>
 
     <div v-if="showEmailModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4" style="background: rgba(14,14,12,0.5);">
