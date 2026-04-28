@@ -18,22 +18,36 @@ serve(async (req) => {
     )
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 
-    // ── 0. Cooldown — skip if a digest was queued in the last 6 hours ─────────
-    const { data: cdRow } = await supabase
-      .from('app_settings')
-      .select('value')
-      .eq('key', 'digest_last_queued_at')
-      .maybeSingle()
+    // ── 0. One digest per calendar day — atomic claim ─────────────────────────
+    const todayUTC = new Date().toISOString().split('T')[0] // "YYYY-MM-DD"
 
-    if (cdRow?.value) {
-      const lastQueued = new Date(cdRow.value)
-      const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000)
-      if (lastQueued > sixHoursAgo) {
-        return new Response(JSON.stringify({ ok: true, note: 'cooldown active, skipped' }), {
+    // Try to stamp today: only succeeds if the row exists AND value != today
+    const { data: stamped } = await supabase
+      .from('app_settings')
+      .update({ value: todayUTC })
+      .eq('key', 'digest_last_queued_at')
+      .neq('value', todayUTC)
+      .select('key')
+
+    if (!stamped || stamped.length === 0) {
+      // Row either already has today's date, or doesn't exist yet
+      const { data: existing } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'digest_last_queued_at')
+        .maybeSingle()
+
+      if (existing?.value === todayUTC) {
+        // Already sent today — skip
+        return new Response(JSON.stringify({ ok: true, note: 'digest already sent today' }), {
           headers: { 'Content-Type': 'application/json' }, status: 200,
         })
       }
+      // Row doesn't exist yet — create it so future calls are blocked
+      await supabase.from('app_settings')
+        .insert({ key: 'digest_last_queued_at', value: todayUTC })
     }
+    // stamped.length > 0 OR row was just created → we own this send
 
     // ── 1. Cancel the previously scheduled digest (if any) ───────────────────
     const { data: setting } = await supabase
@@ -153,9 +167,6 @@ serve(async (req) => {
       .update({ value: resendData.id || null })
       .eq('key', 'digest_resend_id')
 
-    await supabase
-      .from('app_settings')
-      .upsert({ key: 'digest_last_queued_at', value: new Date().toISOString() }, { onConflict: 'key' })
 
     return new Response(JSON.stringify({ ok: true, resend_id: resendData.id, pending: pending.length }), {
       headers: { 'Content-Type': 'application/json' },

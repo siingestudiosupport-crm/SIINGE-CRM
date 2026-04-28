@@ -42,7 +42,7 @@
           :style="activeTab === 'SOW'
             ? 'padding: 12px 0; margin-right: 24px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; border: none; background: none; cursor: pointer; color: var(--ink); border-bottom: 2px solid var(--ink); transition: color 120ms;'
             : 'padding: 12px 0; margin-right: 24px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; border: none; background: none; cursor: pointer; color: var(--ink-4); border-bottom: 2px solid transparent; transition: color 120ms;'"
-        >SOW</button>
+        >Contracts</button>
         <button
           v-if="!project?.id"
           @click="activeTab = 'Projects'; fetchClientProjects()"

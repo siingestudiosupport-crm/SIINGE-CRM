@@ -346,10 +346,34 @@ const submitDocument = async () => {
       throw dbError;
     }
 
+    // For SOW: also stamp the project that was most recently sent a SOW
+    let signedProjectId = null
+    let signedProjectTitle = null
+    if (!isNDA.value) {
+      const { data: sowProject } = await supabase
+        .from('projects')
+        .select('id, title')
+        .eq('client_id', client.value.id)
+        .not('sow_sent_date', 'is', null)
+        .is('sow_signed_date', null)
+        .order('sow_sent_date', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (sowProject) {
+        signedProjectId = sowProject.id
+        signedProjectTitle = sowProject.title
+        await supabase.from('projects')
+          .update({ sow_signed_date: d, sow_pdf_path: filePath })
+          .eq('id', sowProject.id)
+      }
+    }
+
     await supabase.from('activity_logs').insert({
       event_type: isNDA.value ? 'nda_signed' : 'sow_signed',
       client_id: client.value.id,
       client_name: client.value.name,
+      project_id: signedProjectId,
+      project_title: signedProjectTitle,
       notes: `Signed by ${form.value.client_name} (${form.value.client_title})`
     })
 
