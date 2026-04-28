@@ -1,3 +1,4 @@
+// @ts-nocheck — Deno Edge Function: disable TS server checks (URL imports, Deno global)
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -15,11 +16,12 @@ serve(async (req) => {
 
       const qa = invitee.questions_and_answers || [];
 
-      const getAnswer = (keywords: string[]) => {
-        const found = qa.find((q: any) => 
+      const getAnswer = (keywords) => {
+        const found = qa.find((q) =>
           keywords.some(kw => q.question.toLowerCase().includes(kw.toLowerCase()))
         );
-        return found ? found.answer : 'No especificado';
+        const answer = found?.answer?.trim();
+        return answer || null;
       };
 
       const company = getAnswer(['company', 'empresa', 'brand name']);
@@ -37,22 +39,18 @@ serve(async (req) => {
         meeting_link = loc.join_url || (loc.location && loc.location.startsWith('http') ? loc.location : null);
       }
 
-      // --- CAZADOR DE TELÉFONOS EXTREMO ---
       // Intento 1: El campo oficial de recordatorios SMS de Calendly
       let phone_number = invitee.text_reminder_number || null;
-      
+
       // Intento 2: Buscar agresivamente en las preguntas personalizadas
       if (!phone_number) {
-        const phoneAnswer = getAnswer(['phone', 'teléfono', 'whatsapp', 'number', 'número', 'sms']);
-        if (phoneAnswer !== 'No especificado') {
-          phone_number = phoneAnswer;
-        }
+        phone_number = getAnswer(['phone', 'teléfono', 'whatsapp', 'number', 'número', 'sms']);
       }
 
-      // Función para adivinar el país por el prefijo
+      // Detectar país por prefijo telefónico
       let country = null;
       if (phone_number) {
-        const cleanPhone = phone_number.replace(/\s+/g, ''); // Quitamos espacios
+        const cleanPhone = phone_number.replace(/\s+/g, '');
         if (cleanPhone.startsWith('+1')) country = 'USA/Canada 🇺🇸🇨🇦';
         else if (cleanPhone.startsWith('+57')) country = 'Colombia 🇨🇴';
         else if (cleanPhone.startsWith('+52')) country = 'Mexico 🇲🇽';
@@ -72,31 +70,45 @@ serve(async (req) => {
 
       console.log(`Procesando a ${invitee.name} del país ${country || 'Desconocido'} con teléfono ${phone_number || 'N/A'}...`);
 
-      const { data, error } = await supabase
+      // Verificar si el cliente ya existe para no sobreescribir estado de contratos
+      const { data: existing } = await supabase
         .from('clients')
-        .upsert({
-          name: invitee.name,
-          email: invitee.email,
-          company: company,
-          brand_stage: brand_stage,
-          investment_level: investment_level,
-          development_timeline: development_timeline,
-          support_level: support_level,
-          primary_issue: primary_issue,
-          scheduled_date: start_time,
-          meeting_link: meeting_link,
-          phone_number: phone_number,
-          country: country,
-          nda_status: 'Pending',
-          sow_status: 'Pending'
-        }, { onConflict: 'email' })
+        .select('id')
+        .eq('email', invitee.email)
+        .maybeSingle()
+
+      const clientPayload = {
+        name: invitee.name,
+        email: invitee.email,
+        company,
+        brand_stage,
+        investment_level,
+        development_timeline,
+        support_level,
+        primary_issue,
+        scheduled_date: start_time,
+        meeting_link,
+        phone_number,
+        country,
+        lead_source: 'Calendly',
+      }
+
+      // Solo setear estado de contratos en clientes nuevos
+      if (!existing) {
+        clientPayload.nda_status = 'Pending'
+        clientPayload.sow_status = 'Pending'
+      }
+
+      const { error } = await supabase
+        .from('clients')
+        .upsert(clientPayload, { onConflict: 'email' })
         .select()
 
       if (error) {
         console.error("❌ ERROR EXACTO DE SUPABASE:", error);
         throw error;
       }
-      
+
       return new Response("Cliente guardado", { status: 200 })
     }
 

@@ -123,7 +123,7 @@ serve(async (req: Request) => {
 
   try {
     // Recibimos client_id y doc_type desde el Frontend para el tracking
-    const { to, subject, html, client_id, doc_type } = await req.json()
+    const { to, subject, html, client_id, doc_type, queue_item_id } = await req.json()
 
     // Unimos el mensaje original del CRM con la firma HTML
     const finalHtml = `
@@ -148,8 +148,9 @@ serve(async (req: Request) => {
         html: finalHtml,
         // ETIQUETAS PARA QUE EL WEBHOOK SEPA QUÉ DOCUMENTO SE ABRIÓ
         tags: [
-          { name: 'client_id', value: client_id || 'unknown' },
-          { name: 'doc_type', value: doc_type || 'general' }
+          { name: 'client_id',     value: client_id     || 'unknown' },
+          { name: 'doc_type',      value: doc_type      || 'general' },
+          { name: 'queue_item_id', value: queue_item_id || 'none'    }
         ]
       }),
     })

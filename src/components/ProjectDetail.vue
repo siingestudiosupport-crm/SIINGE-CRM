@@ -45,7 +45,13 @@
         >SOW</button>
         <button
           v-if="!project?.id"
-          @click="activeTab = 'Contracts'"
+          @click="activeTab = 'Projects'; fetchClientProjects()"
+          :style="activeTab === 'Projects'
+            ? 'padding: 12px 0; margin-right: 24px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; border: none; background: none; cursor: pointer; color: var(--ink); border-bottom: 2px solid var(--ink); transition: color 120ms;'
+            : 'padding: 12px 0; margin-right: 24px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; border: none; background: none; cursor: pointer; color: var(--ink-4); border-bottom: 2px solid transparent; transition: color 120ms;'"
+        >Projects</button>
+        <button
+          @click="activeTab = 'Contracts'; fetchClientProjects()"
           :style="activeTab === 'Contracts'
             ? 'padding: 12px 0; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; border: none; background: none; cursor: pointer; color: var(--ink); border-bottom: 2px solid var(--ink); transition: color 120ms;'
             : 'padding: 12px 0; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; border: none; background: none; cursor: pointer; color: var(--ink-4); border-bottom: 2px solid transparent; transition: color 120ms;'"
@@ -70,15 +76,19 @@
           <section class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">Pipeline Stage</label>
-              <select v-model="localEdits.pipeline_stage" @change="updateOverview" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium text-gray-800 transition-all shadow-sm">
+              <select v-model="localEdits.pipeline_stage" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium text-gray-800 transition-all shadow-sm">
                 <option v-for="stage in stages" :key="stage" :value="stage">{{ stage }}</option>
               </select>
+              <div v-if="hubStatus" style="margin-top: 7px; display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-4);">Hub:</span>
+                <span :style="`font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.10em; padding: 2px 7px; border-radius: 2px; border: 1px solid; background: ${HUB_STAGE_COLORS[hubStatus] || 'var(--ink-4)'}18; color: ${HUB_STAGE_COLORS[hubStatus] || 'var(--ink-4)'}; border-color: ${HUB_STAGE_COLORS[hubStatus] || 'var(--ink-4)'}44;`">{{ hubStatus }}</span>
+              </div>
             </div>
             <div>
               <label class="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">Proposal Value</label>
               <div class="flex items-center border border-gray-300 rounded-lg px-3 bg-white focus-within:ring-2 focus-within:ring-blue-500 shadow-sm transition-all">
                 <span class="text-gray-500 mr-1 font-bold">$</span>
-                <input v-model="localEdits.proposal_value" @blur="updateOverview" type="number" class="w-full bg-transparent border-none p-2.5 outline-none text-sm font-bold text-gray-800" placeholder="0.00" />
+                <input v-model="localEdits.proposal_value" type="number" class="w-full bg-transparent border-none p-2.5 outline-none text-sm font-bold text-gray-800" placeholder="0.00" />
               </div>
             </div>
           </section>
@@ -121,7 +131,7 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--critical)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
               <label style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--critical);">Reason for Loss (Required)</label>
             </div>
-            <select v-model="localEdits.loss_reason" @change="updateOverview" class="w-full border border-red-300 rounded-lg p-2.5 text-sm bg-white focus:ring-2 focus:ring-red-500 outline-none text-red-900 font-bold shadow-sm transition-all">
+            <select v-model="localEdits.loss_reason" class="w-full border border-red-300 rounded-lg p-2.5 text-sm bg-white focus:ring-2 focus:ring-red-500 outline-none text-red-900 font-bold shadow-sm transition-all">
               <option value="" disabled>Select a reason...</option>
               <option value="Too expensive">Too expensive</option>
               <option value="Timeline mismatch">Timeline mismatch</option>
@@ -165,49 +175,105 @@
             </div>
           </section>
 
-          <section>
-            <div class="flex justify-between items-center mb-2">
-              <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest">Internal Notes (Team Only)</label>
-              <span class="text-[9px] text-gray-400 font-bold uppercase">Autosave on blur</span>
+          <section v-if="project?.id">
+            <div class="flex justify-between items-center" style="margin-bottom: 8px;">
+              <label style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3);">Snooze Follow-up Notifications</label>
+              <button
+                v-if="localEdits.snooze_until"
+                @click="localEdits.snooze_until = ''; updateSnooze()"
+                style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ember); background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0;"
+              >Clear</button>
             </div>
+            <div class="flex items-center gap-3">
+              <input
+                v-model="localEdits.snooze_until"
+                type="date"
+                @change="updateSnooze"
+                style="flex: 1; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;"
+                @focus="e => e.target.style.borderColor = 'var(--ink)'"
+                @blur="e => e.target.style.borderColor = 'var(--ink-5)'"
+              />
+              <span v-if="localEdits.snooze_until && new Date(localEdits.snooze_until) > new Date()" style="font-size: 11px; font-weight: 700; color: var(--caution); white-space: nowrap;">Snoozed</span>
+            </div>
+            <p style="font-size: 10px; color: var(--ink-5); margin: 4px 0 0; font-style: italic;">Set a date to pause notifications for this project until then.</p>
+          </section>
+
+          <section>
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-widest">Internal Notes (Team Only)</label>
             <textarea
               v-model="localEdits.internal_notes"
-              @blur="updateOverview"
               placeholder="Private notes about negotiations, specific founder traits, or red flags..."
               class="w-full border border-gray-300 rounded-xl p-4 h-32 text-sm focus:ring-2 focus:ring-blue-500 outline-none leading-relaxed text-gray-700 shadow-inner"
             ></textarea>
           </section>
 
-          <section v-if="project?.id" class="p-5 border border-gray-200 rounded-xl bg-white shadow-sm space-y-4">
-            <h3 class="font-bold text-gray-800 uppercase tracking-tighter text-xs border-b border-gray-100 pb-3">Project Financials & Logistics</h3>
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">$ Paid</label>
-                <div class="flex items-center border border-gray-300 rounded-lg px-3 bg-white focus-within:ring-2 focus-within:ring-blue-500 shadow-sm">
-                  <span class="text-gray-500 mr-1 font-bold text-sm">$</span>
-                  <input v-model="localEdits.amount_paid" @blur="updateOverview" type="number" min="0" step="0.01" placeholder="0" class="w-full bg-transparent border-none py-2.5 outline-none text-sm font-bold text-gray-800" />
+          <section v-if="project?.id" style="border: 1px solid var(--bone-edge); border-radius: 4px; overflow: hidden;">
+            <!-- Header -->
+            <div style="padding: 12px 16px; background: var(--paper-2); border-bottom: 1px solid var(--bone-edge); display: flex; justify-content: space-between; align-items: center;">
+              <h3 style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-3); margin: 0;">Project Deliverables</h3>
+            </div>
+
+            <div style="padding: 16px; background: var(--paper); display: flex; flex-direction: column; gap: 16px;">
+
+              <!-- $ Paid / $ Owed -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                  <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: var(--ink-3); margin-bottom: 5px;">$ Paid</label>
+                  <div style="display: flex; align-items: center; border: 1px solid var(--ink-5); border-radius: 2px; padding: 0 10px;" @focusin="e=>e.currentTarget.style.borderColor='var(--ink)'" @focusout="e=>e.currentTarget.style.borderColor='var(--ink-5)'">
+                    <span style="color: var(--ink-4); font-size: 13px; margin-right: 4px; font-weight: 700;">$</span>
+                    <input v-model="localEdits.amount_paid" type="number" min="0" step="0.01" placeholder="0" style="flex: 1; border: none; background: transparent; padding: 8px 0; font-family: var(--font-sans); font-size: 13px; color: var(--ink); outline: none; font-weight: 700;" />
+                  </div>
+                </div>
+                <div>
+                  <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: var(--ink-3); margin-bottom: 5px;">$ Owed</label>
+                  <div style="display: flex; align-items: center; border: 1px solid var(--ink-5); border-radius: 2px; padding: 0 10px;" @focusin="e=>e.currentTarget.style.borderColor='var(--ink)'" @focusout="e=>e.currentTarget.style.borderColor='var(--ink-5)'">
+                    <span style="color: var(--ink-4); font-size: 13px; margin-right: 4px; font-weight: 700;">$</span>
+                    <input v-model="localEdits.amount_owed" type="number" min="0" step="0.01" placeholder="0" style="flex: 1; border: none; background: transparent; padding: 8px 0; font-family: var(--font-sans); font-size: 13px; color: var(--ink); outline: none; font-weight: 700;" />
+                  </div>
                 </div>
               </div>
+
+              <!-- Deliverables list -->
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <label
+                  v-for="item in deliverableItems" :key="item.model"
+                  style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--bone-edge); border-radius: 2px; cursor: pointer; background: var(--bone);"
+                  @mouseenter="e=>e.currentTarget.style.background='var(--paper-2)'"
+                  @mouseleave="e=>e.currentTarget.style.background='var(--bone)'"
+                >
+                  <input type="checkbox" v-model="localEdits[item.model]" style="width: 14px; height: 14px; accent-color: var(--ink); flex-shrink: 0; cursor: pointer;" />
+                  <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-2);">{{ item.label }}</span>
+                </label>
+              </div>
+
+              <!-- Notes -->
               <div>
-                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">$ Owed</label>
-                <div class="flex items-center border border-gray-300 rounded-lg px-3 bg-white focus-within:ring-2 focus-within:ring-blue-500 shadow-sm">
-                  <span class="text-gray-500 mr-1 font-bold text-sm">$</span>
-                  <input v-model="localEdits.amount_owed" @blur="updateOverview" type="number" min="0" step="0.01" placeholder="0" class="w-full bg-transparent border-none py-2.5 outline-none text-sm font-bold text-gray-800" />
+                <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: var(--ink-3); margin-bottom: 6px;">Notes</label>
+                <textarea v-model="localEdits.milestones" rows="3" placeholder="Project notes..." style="width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink-2); background: var(--paper); outline: none; resize: vertical; line-height: 1.6;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur.capture="e=>e.target.style.borderColor='var(--ink-5)'"></textarea>
+              </div>
+
+              <!-- Add to Manu Hub -->
+              <div style="border-top: 1px solid var(--bone-edge); padding-top: 14px;">
+                <button
+                  v-if="!project.hub_project_id"
+                  @click="addToHub"
+                  :disabled="isAddingToHub"
+                  style="width: 100%; font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.16em; padding: 11px 16px; background: var(--ink); color: var(--paper); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer; transition: opacity 120ms; display: flex; align-items: center; justify-content: center; gap: 8px;"
+                  :style="isAddingToHub ? 'opacity:0.5;cursor:not-allowed;' : ''"
+                  @mouseenter="e => !isAddingToHub && (e.currentTarget.style.opacity='0.75')"
+                  @mouseleave="e => e.currentTarget.style.opacity='1'"
+                >
+                  <svg v-if="isAddingToHub" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                  <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+                  {{ isAddingToHub ? 'Adding to Hub...' : 'Add to Manu Hub' }}
+                </button>
+                <div v-else style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--positive-soft); border: 1px solid #B8C4A0; border-radius: 2px;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--positive)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--positive);">Added to Manu Hub</span>
                 </div>
               </div>
+
             </div>
-            <div>
-              <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Due Date</label>
-              <input v-model="localEdits.due_date" @blur="updateOverview" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 text-sm shadow-sm" />
-            </div>
-            <div>
-              <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Milestones</label>
-              <textarea v-model="localEdits.milestones" @blur="updateOverview" rows="4" placeholder="• Phase 1: Discovery&#10;• Phase 2: Design&#10;• Phase 3: Delivery" class="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none leading-relaxed text-gray-700 shadow-inner resize-none"></textarea>
-            </div>
-            <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition-colors">
-              <input type="checkbox" v-model="localEdits.in_menu_hub" @change="updateOverview" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
-              <span class="text-sm font-medium text-gray-700">Added to Menu Hub</span>
-            </label>
           </section>
         </div>
 
@@ -245,6 +311,27 @@
               SOW already {{ project.client.sow_status.toLowerCase() }} — content is locked. Use Contracts Log → Reset to re-edit.
             </div>
 
+            <div v-if="!['Sent', 'Signed'].includes(project.client.sow_status)" style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; padding: 16px;">
+              <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0 0 10px;">Sent Outside CRM?</p>
+              <p style="font-size: 11px; color: var(--ink-4); margin: 0 0 12px; font-style: italic;">If the SOW was sent via email or another tool, enter the sent date to trigger follow-ups automatically.</p>
+              <div class="flex items-center gap-3">
+                <input
+                  v-model="localEdits.manual_sow_date"
+                  type="date"
+                  :max="new Date().toISOString().substring(0, 10)"
+                  style="flex: 1; padding: 8px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;"
+                  @focus="e => e.target.style.borderColor = 'var(--ink)'"
+                  @blur="e => e.target.style.borderColor = 'var(--ink-5)'"
+                />
+                <button
+                  @click="markSowSentManually"
+                  :disabled="!localEdits.manual_sow_date"
+                  style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 16px; background: var(--ink); color: var(--paper); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer; transition: opacity 120ms; white-space: nowrap;"
+                  :style="!localEdits.manual_sow_date ? 'opacity: 0.4; cursor: not-allowed;' : ''"
+                >Mark as Sent</button>
+              </div>
+            </div>
+
             <div v-if="availableDocs.length > 0" class="p-6 border border-blue-200 rounded-2xl bg-blue-50 shadow-lg relative overflow-hidden">
               <div class="absolute top-0 right-0 p-4 opacity-10 text-4xl">📧</div>
               <h3 class="font-black text-blue-900 text-xs uppercase tracking-widest mb-4">Dispatch Center</h3>
@@ -268,6 +355,43 @@
               All documents have been dispatched. View status in the Contracts Log tab.
             </div>
           </template>
+        </div>
+
+        <!-- PROJECTS TAB -->
+        <div v-if="activeTab === 'Projects'" class="pb-20" style="display: flex; flex-direction: column; gap: 10px;">
+          <div v-if="allClientProjects.length === 0" style="padding: 32px; text-align: center; color: var(--ink-4); font-size: 12px; font-style: italic;">
+            No projects yet.
+          </div>
+          <button
+            v-for="proj in allClientProjects"
+            :key="proj.id"
+            @click="emit('open-project', proj)"
+            class="w-full"
+            :style="`padding: 14px 16px; background: var(--bone); border: 1px solid ${proj.pipeline_stage === 'Project Complete' ? 'var(--bone-edge)' : 'var(--bone-edge)'}; border-radius: 4px; cursor: pointer; transition: border-color 120ms; text-align: left; opacity: ${proj.pipeline_stage === 'Project Complete' ? '0.65' : '1'};`"
+            @mouseenter="e => e.currentTarget.style.borderColor = 'var(--ink)'"
+            @mouseleave="e => e.currentTarget.style.borderColor = 'var(--bone-edge)'"
+          >
+            <!-- Row 1: title + stage -->
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px;">
+              <span style="font-family: var(--font-display); font-style: italic; font-size: 18px; color: var(--ink); letter-spacing: -0.01em; line-height: 1.2;">{{ proj.title }}</span>
+              <span style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-4); white-space: nowrap; flex-shrink: 0; margin-top: 4px;">{{ proj.pipeline_stage }}</span>
+            </div>
+            <!-- Row 2: NDA/SOW chips + amount -->
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 6px;">
+              <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                <span v-if="project?.client?.nda_status" :style="getStatusClass(project.client.nda_status) + ' padding: 2px 6px; font-size: 8px;'">NDA: {{ project.client.nda_status }}</span>
+                <span v-if="project?.client?.sow_status" :style="getStatusClass(project.client.sow_status) + ' padding: 2px 6px; font-size: 8px;'">SOW: {{ project.client.sow_status }}</span>
+              </div>
+              <span v-if="proj.amount_paid || proj.amount_owed" style="font-size: 11px; font-weight: 700; color: var(--ink-3); font-family: var(--font-mono); white-space: nowrap;">
+                ${{ (proj.amount_paid || 0).toLocaleString() }} / ${{ ((proj.amount_paid || 0) + (proj.amount_owed || 0)).toLocaleString() }}
+              </span>
+            </div>
+            <!-- Row 3: next milestone -->
+            <div v-if="getNextMilestone(proj)" style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--caution);">{{ getNextMilestone(proj).label }}</span>
+              <span style="font-size: 10px; color: var(--ink-4);">Due {{ getNextMilestone(proj).formatted }}</span>
+            </div>
+          </button>
         </div>
 
         <!-- CONTRACTS LOG TAB (client directory view) -->
@@ -366,6 +490,21 @@
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
           Delete Project
         </button>
+        <div class="flex items-center gap-3">
+          <span v-if="savedFlash" style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--positive);">Saved ✓</span>
+          <button
+            v-if="activeTab === 'Overview'"
+            @click="updateOverview"
+            :disabled="isSaving"
+            style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 24px; background: var(--ink); color: var(--paper); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer; transition: opacity 120ms; display: inline-flex; align-items: center; gap: 6px;"
+            :style="isSaving ? 'opacity: 0.5; cursor: not-allowed;' : ''"
+            @mouseenter="e => !isSaving && (e.currentTarget.style.opacity = '0.75')"
+            @mouseleave="e => (e.currentTarget.style.opacity = '1')"
+          >
+            <svg v-if="isSaving" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+            {{ isSaving ? 'Saving...' : 'Save Changes' }}
+          </button>
+        </div>
       </div>
 
     </div>
@@ -425,6 +564,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { supabase } from '../lib/supabaseClient'
+import { hubSupabase } from '../lib/hubClient'
 import { useConfirmModal } from '../composables/useConfirmModal'
 
 const props = defineProps({
@@ -432,7 +572,7 @@ const props = defineProps({
   project: Object
 })
 
-const emit = defineEmits(['close', 'updated'])
+const emit = defineEmits(['close', 'updated', 'open-project'])
 const { confirm: showConfirm, alert: showAlert } = useConfirmModal()
 
 const defaultDeliverables = `Service Provider will deliver the following:\n• [INSERT DELIVERABLES]\n• [Be specific: outputs, formats, quantities]\n• [Include anything that defines scope clearly]\nAny work not expressly listed above is considered out of scope.`;
@@ -442,33 +582,99 @@ const defaultFees = `Total Project Fee: $[INSERT]\nPayment Terms:\n• [INSERT S
 const activeTab = ref('Overview')
 const showEmailModal = ref(false)
 const isSendingEmail = ref(false)
-const selectedDocs = ref([])
+const savedFlash = ref(false)
+const isSaving = ref(false)
+let savedFlashTimer = null
+const flashSaved = () => {
+  savedFlash.value = true
+  clearTimeout(savedFlashTimer)
+  savedFlashTimer = setTimeout(() => { savedFlash.value = false }, 1800)
+}
+const selectedDocs = ref(/** @type {string[]} */ ([]))
 const emailData = ref({ subject: '', messageText: '', buttonsHtml: '' })
+
+const hubStatus = ref(null)
+
+const HUB_STAGE_COLORS = {
+  'Concept & Design':          '#f97316',
+  'Quote':                     '#0ea5e9',
+  'Material & Trim Sourcing':  '#8b5cf6',
+  'Sample Development':        '#d946ef',
+  'Final Tech Pack & Bulk Prep': '#14b8a6',
+  'Quality Inspection':        '#eab308',
+  'Shipping & Logistics':      '#3b82f6',
+  'Project Completion':        '#22c55e',
+}
+
+const fetchHubStatus = async () => {
+  const id = props.project?.hub_project_id
+  if (!id) { hubStatus.value = null; return }
+  const { data } = await hubSupabase.from('projects').select('status').eq('id', id).single()
+  hubStatus.value = data?.status || null
+}
+
+const isAddingToHub = ref(false)
+
+const deliverableItems = [
+  { label: 'Trend / Market Analysis',       model: 'deliverable_trend_analysis' },
+  { label: 'Apparel Design',                model: 'deliverable_design' },
+  { label: 'Branding / Packaging Design',   model: 'deliverable_branding' },
+  { label: 'Tech Pack',                     model: 'deliverable_tech_pack' },
+  { label: 'Product Development Mgmt',      model: 'deliverable_product_dev' },
+  { label: 'Product Analysis × Refinement', model: 'deliverable_analysis' },
+  { label: 'In House Patternmaking',        model: 'deliverable_in_house_patternmaking' },
+  { label: 'In House Proto',               model: 'deliverable_in_house_proto' },
+  { label: 'In House Manufacturing',        model: 'deliverable_in_house_manufacturing' },
+]
 
 // Copia local de los campos editables — nunca mutamos la prop directamente
 const localEdits = ref({
   pipeline_stage: '', proposal_value: null, internal_notes: '',
   loss_reason: '', client_tier: '',
   sow_deliverables: '', sow_timeline: '', sow_fees_payment: '',
-  amount_paid: null, amount_owed: null, milestones: '', due_date: '', in_menu_hub: false
+  amount_paid: null, amount_owed: null, milestones: '', due_date: '', in_menu_hub: false,
+  snooze_until: '', manual_sow_date: '',
+  deliverable_trend_analysis: false, deliverable_branding: false,
+  deliverable_design: false, deliverable_design_due: '',
+  deliverable_tech_pack: false, deliverable_tech_pack_due: '',
+  deliverable_product_dev: false,
+  deliverable_manu_quotes_due: '', deliverable_initial_sample_due: '',
+  deliverable_approved_sample_due: '', deliverable_size_range_due: '', deliverable_bulk_due: '',
+  deliverable_analysis: false, deliverable_analysis_due: '',
+  deliverable_in_house_patternmaking: false,
+  deliverable_in_house_proto: false,
+  deliverable_in_house_manufacturing: false,
 })
 
 const stages = [
   'Directory View', 'Intake Form Received', 'Call Booked', 'Proposal Sent',
-  'Contracts Signed', 'Invoice Paid', 'Follow Up Needed',
+  'Contracts Signed', 'Invoice Paid', 'Project In Progress', 'Follow Up Needed',
   'Churn', 'Project Complete', 'Future Project Opp'
 ]
 
-const clientProjects = ref([])
+const clientProjects = ref(/** @type {any[]} */ ([]))
+const allClientProjects = ref(/** @type {any[]} */ ([]))
 
 const fetchClientProjects = async () => {
   if (!props.project?.client_id) return
-  const { data } = await supabase
+
+  const { data: all, error: allErr } = await supabase
+    .from('projects')
+    .select('*')
+    .eq('client_id', props.project.client_id)
+    .order('created_at', { ascending: false })
+  if (allErr) { console.error('fetchClientProjects:', allErr.message); return }
+  // Completed projects go to the bottom
+  const active    = (all || []).filter(p => p.pipeline_stage !== 'Project Complete')
+  const completed = (all || []).filter(p => p.pipeline_stage === 'Project Complete')
+  allClientProjects.value = [...active, ...completed]
+
+  const { data: sow } = await supabase
     .from('projects')
     .select('id, title, created_at, pipeline_stage, sow_deliverables, sow_sent_date, sow_signed_date, sow_pdf_path')
     .eq('client_id', props.project.client_id)
     .order('created_at', { ascending: false })
-  clientProjects.value = (data || []).filter(p => p.sow_deliverables || p.sow_sent_date)
+  clientProjects.value = (sow || []).filter(p => p.sow_deliverables || p.sow_sent_date)
 }
 
 // Declarado ANTES del watch que lo usa para evitar TDZ
@@ -480,10 +686,59 @@ const availableDocs = computed(() => {
     // Vista tarjeta de cliente: solo NDA
     if (nda !== 'Sent' && nda !== 'Signed') docs.push('NDA')
   } else {
-    // Vista proyecto en pipeline: solo SOW
+    // Vista proyecto en pipeline: NDA si aún no fue enviado (primer proyecto), siempre SOW
+    if (nda !== 'Sent' && nda !== 'Signed') docs.push('NDA')
     if (sow !== 'Sent' && sow !== 'Signed') docs.push('SOW')
   }
   return docs
+})
+
+watch(() => props.project?.id, async (newId, oldId) => {
+  allClientProjects.value = []
+  clientProjects.value = []
+  if (newId && newId !== oldId && props.isOpen && props.project) {
+    const p = props.project
+    const c = p.client
+    localEdits.value = {
+      pipeline_stage: p.pipeline_stage || '',
+      proposal_value: p.proposal_value || null,
+      internal_notes: p.internal_notes || '',
+      loss_reason: p.loss_reason || '',
+      client_tier: c?.client_tier || '',
+      sow_deliverables: defaultDeliverables,
+      sow_timeline: defaultTimeline,
+      sow_fees_payment: defaultFees,
+      amount_paid: p.amount_paid || null,
+      amount_owed: p.amount_owed || null,
+      milestones: p.milestones || '',
+      due_date: p.due_date || '',
+      in_menu_hub: p.in_menu_hub || false,
+      snooze_until: p.snooze_until ? p.snooze_until.substring(0, 10) : '',
+      manual_sow_date: '',
+      deliverable_design: p.deliverable_design || false,
+      deliverable_design_due: p.deliverable_design_due || '',
+      deliverable_tech_pack: p.deliverable_tech_pack || false,
+      deliverable_tech_pack_due: p.deliverable_tech_pack_due || '',
+      deliverable_product_dev: p.deliverable_product_dev || false,
+      deliverable_manu_quotes_due: p.deliverable_manu_quotes_due || '',
+      deliverable_initial_sample_due: p.deliverable_initial_sample_due || '',
+      deliverable_approved_sample_due: p.deliverable_approved_sample_due || '',
+      deliverable_size_range_due: p.deliverable_size_range_due || '',
+      deliverable_bulk_due: p.deliverable_bulk_due || '',
+      deliverable_analysis: p.deliverable_analysis || false,
+      deliverable_analysis_due: p.deliverable_analysis_due || '',
+      deliverable_trend_analysis: p.deliverable_trend_analysis || false,
+      deliverable_branding: p.deliverable_branding || false,
+      deliverable_in_house_patternmaking: p.deliverable_in_house_patternmaking || false,
+      deliverable_in_house_proto: p.deliverable_in_house_proto || false,
+      deliverable_in_house_manufacturing: p.deliverable_in_house_manufacturing || false,
+    }
+    selectedDocs.value = availableDocs.value
+    fetchHubStatus()
+  }
+  if (props.isOpen && !props.project?.id && props.project?.client_id) {
+    await fetchClientProjects()
+  }
 })
 
 watch(() => props.isOpen, (newVal) => {
@@ -504,9 +759,24 @@ watch(() => props.isOpen, (newVal) => {
       milestones: p.milestones || '',
       due_date: p.due_date || '',
       in_menu_hub: p.in_menu_hub || false,
+      snooze_until: p.snooze_until ? p.snooze_until.substring(0, 10) : '',
+      manual_sow_date: '',
+      deliverable_design: p.deliverable_design || false,
+      deliverable_design_due: p.deliverable_design_due || '',
+      deliverable_tech_pack: p.deliverable_tech_pack || false,
+      deliverable_tech_pack_due: p.deliverable_tech_pack_due || '',
+      deliverable_product_dev: p.deliverable_product_dev || false,
+      deliverable_manu_quotes_due: p.deliverable_manu_quotes_due || '',
+      deliverable_initial_sample_due: p.deliverable_initial_sample_due || '',
+      deliverable_approved_sample_due: p.deliverable_approved_sample_due || '',
+      deliverable_size_range_due: p.deliverable_size_range_due || '',
+      deliverable_bulk_due: p.deliverable_bulk_due || '',
+      deliverable_analysis: p.deliverable_analysis || false,
+      deliverable_analysis_due: p.deliverable_analysis_due || '',
     }
     selectedDocs.value = availableDocs.value
     if (!props.project?.id) fetchClientProjects()
+    fetchHubStatus()
   }
 }, { immediate: true })
 
@@ -547,8 +817,9 @@ const formatDate = (iso) => iso ? new Date(iso).toLocaleString('en-US', { month:
 
 const updateOverview = async () => {
   if (!props.project?.id) return
+  isSaving.value = true
   try {
-    const isClosingStage = localEdits.value.pipeline_stage === 'Contracts Signed' || localEdits.value.pipeline_stage === 'Churn'
+    const isClosingStage = ['Contracts Signed', 'Invoice Paid', 'Project Complete', 'Churn'].includes(localEdits.value.pipeline_stage)
     const updates = {
       pipeline_stage: localEdits.value.pipeline_stage,
       internal_notes: localEdits.value.internal_notes,
@@ -560,16 +831,68 @@ const updateOverview = async () => {
       milestones: localEdits.value.milestones || null,
       due_date: localEdits.value.due_date || null,
       in_menu_hub: localEdits.value.in_menu_hub,
+      deliverable_design: localEdits.value.deliverable_design,
+      deliverable_design_due: localEdits.value.deliverable_design_due || null,
+      deliverable_tech_pack: localEdits.value.deliverable_tech_pack,
+      deliverable_tech_pack_due: localEdits.value.deliverable_tech_pack_due || null,
+      deliverable_product_dev: localEdits.value.deliverable_product_dev,
+      deliverable_manu_quotes_due: localEdits.value.deliverable_manu_quotes_due || null,
+      deliverable_initial_sample_due: localEdits.value.deliverable_initial_sample_due || null,
+      deliverable_approved_sample_due: localEdits.value.deliverable_approved_sample_due || null,
+      deliverable_size_range_due: localEdits.value.deliverable_size_range_due || null,
+      deliverable_bulk_due: localEdits.value.deliverable_bulk_due || null,
+      deliverable_analysis: localEdits.value.deliverable_analysis,
+      deliverable_analysis_due: localEdits.value.deliverable_analysis_due || null,
+      deliverable_trend_analysis: localEdits.value.deliverable_trend_analysis,
+      deliverable_branding: localEdits.value.deliverable_branding,
+      deliverable_in_house_patternmaking: localEdits.value.deliverable_in_house_patternmaking,
+      deliverable_in_house_proto: localEdits.value.deliverable_in_house_proto,
+      deliverable_in_house_manufacturing: localEdits.value.deliverable_in_house_manufacturing,
     }
-    await supabase.from('projects').update(updates).eq('id', props.project.id)
+    const { error: updateErr } = await supabase.from('projects').update(updates).eq('id', props.project.id)
+    if (updateErr) throw updateErr
+    if (props.project.hub_project_id) {
+      await hubSupabase.from('projects').update({ crm_stage: localEdits.value.pipeline_stage }).eq('id', props.project.hub_project_id)
+    }
+    flashSaved()
     emit('updated')
-  } catch (e) { console.error("Error updating overview:", e) }
+  } catch (e) {
+    console.error("Error updating overview:", e)
+    await showAlert('Error saving changes: ' + (e.message || e), 'Save Failed')
+  } finally {
+    isSaving.value = false
+  }
 }
 
 const updateClientTier = async () => {
   if (!props.project?.client_id) return
   await supabase.from('clients').update({ client_tier: localEdits.value.client_tier }).eq('id', props.project.client_id)
   emit('updated')
+}
+
+const addToHub = async () => {
+  if (!props.project?.id || props.project.hub_project_id) return
+  isAddingToHub.value = true
+  try {
+    const { error: hubError } = await hubSupabase.from('projects').insert([{
+      id: props.project.id,
+      project_name: props.project.title,
+      client_name: props.project.client?.name || '',
+      status: 'active',
+      crm_stage: props.project.pipeline_stage || '',
+      crm_project_id: props.project.id,
+      crm_client_id: props.project.client_id || null,
+    }])
+    if (hubError) throw hubError
+    const { error: crmError } = await supabase
+      .from('projects').update({ hub_project_id: props.project.id }).eq('id', props.project.id)
+    if (crmError) throw crmError
+    emit('updated')
+  } catch (e) {
+    await showAlert('Error adding to Hub: ' + (e.message || e), 'Error')
+  } finally {
+    isAddingToHub.value = false
+  }
 }
 
 const resetSowToTemplates = () => {
@@ -708,6 +1031,57 @@ const dispatchEmail = async () => {
   }
 }
 
+const getNextMilestone = (proj) => {
+  const candidates = [
+    { label: 'Design',              date: proj.deliverable_design     && proj.deliverable_design_due },
+    { label: 'Tech Pack',           date: proj.deliverable_tech_pack  && proj.deliverable_tech_pack_due },
+    { label: 'Manu Quotes',         date: proj.deliverable_product_dev && proj.deliverable_manu_quotes_due },
+    { label: 'Initial Sample',      date: proj.deliverable_product_dev && proj.deliverable_initial_sample_due },
+    { label: 'Approved Sample',     date: proj.deliverable_product_dev && proj.deliverable_approved_sample_due },
+    { label: 'Size Range Approval', date: proj.deliverable_product_dev && proj.deliverable_size_range_due },
+    { label: 'Bulk',                date: proj.deliverable_product_dev && proj.deliverable_bulk_due },
+    { label: 'Product Analysis',    date: proj.deliverable_analysis   && proj.deliverable_analysis_due },
+  ].filter(c => c.date)
+  if (!candidates.length) return null
+  candidates.sort((a, b) => new Date(a.date) - new Date(b.date))
+  const next = candidates[0]
+  return { label: next.label, formatted: new Date(next.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }
+}
+
+const updateSnooze = async () => {
+  if (!props.project?.id) return
+  await supabase.from('projects')
+    .update({ snooze_until: localEdits.value.snooze_until || null })
+    .eq('id', props.project.id)
+  emit('updated')
+}
+
+const markSowSentManually = async () => {
+  if (!localEdits.value.manual_sow_date || !props.project?.client_id || !props.project?.id) return
+  const sentDate = new Date(localEdits.value.manual_sow_date).toISOString()
+  try {
+    await supabase.from('clients')
+      .update({ sow_status: 'Sent', sow_sent_date: sentDate })
+      .eq('id', props.project.client_id)
+    await supabase.from('projects')
+      .update({ sow_sent_date: sentDate })
+      .eq('id', props.project.id)
+    await supabase.from('activity_logs').insert({
+      event_type:    'sow_sent',
+      client_id:     props.project.client_id,
+      client_name:   props.project.client?.name || '',
+      project_id:    props.project.id,
+      project_title: props.project.title,
+      notes:         `SOW marked as sent manually on ${localEdits.value.manual_sow_date}`
+    })
+    localEdits.value.manual_sow_date = ''
+    await showAlert('SOW marked as sent. Follow-up reminders have been queued.', 'Done')
+    emit('updated')
+  } catch (e) {
+    await showAlert('Error: ' + e.message, 'Error')
+  }
+}
+
 const downloadFromVault = async (path) => {
   try {
     const { data, error } = await supabase.storage.from('contracts').createSignedUrl(path, 60)
@@ -739,6 +1113,10 @@ const downloadFromVault = async (path) => {
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 ::-webkit-scrollbar { width: 6px; }

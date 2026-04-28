@@ -26,13 +26,14 @@
             <th style="padding: 10px 16px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3);">Name & Contact</th>
             <th style="padding: 10px 16px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3);">Company</th>
             <th style="padding: 10px 16px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3);">Contracts</th>
+            <th style="padding: 10px 16px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3);">Projects</th>
             <th style="padding: 10px 16px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3);">Join Date</th>
             <th style="padding: 10px 16px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); text-align: center;">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="clients.length === 0">
-            <td colspan="5" style="padding: 32px; text-align: center; color: var(--ink-4); font-size: 13px;">No clients registered yet.</td>
+            <td colspan="6" style="padding: 32px; text-align: center; color: var(--ink-4); font-size: 13px;">No clients registered yet.</td>
           </tr>
 
           <tr v-for="client in clients" :key="client.id"
@@ -42,7 +43,12 @@
               @mouseleave="e => e.currentTarget.style.background = 'transparent'"
           >
             <td style="padding: 14px 16px;">
-              <div style="font-family: var(--font-display); font-style: italic; font-size: 19px; color: var(--ink); line-height: 1.2; letter-spacing: -0.01em;">{{ client.name }}</div>
+              <div class="flex items-center gap-2" style="flex-wrap: wrap;">
+                <div style="font-family: var(--font-display); font-style: italic; font-size: 19px; color: var(--ink); line-height: 1.2; letter-spacing: -0.01em;">{{ client.name }}</div>
+                <span v-if="client.projects?.length" style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; padding: 2px 6px; border-radius: 2px; border: 1px solid var(--ink-5); color: var(--ink-3); background: var(--paper); white-space: nowrap;">
+                  {{ client.projects.length }} {{ client.projects.length === 1 ? 'project' : 'projects' }}
+                </span>
+              </div>
               <div style="font-size: 11px; color: var(--ink-4); margin-top: 2px;">{{ client.email }}</div>
               <div v-if="client.phone_number" style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--ink-3); margin-top: 4px; padding: 2px 6px; border: 1px solid var(--ink-5); border-radius: 2px;">
                 <span v-if="client.country">{{ client.country }}</span>
@@ -62,6 +68,13 @@
                 <span v-if="client.nda_status" :style="getStatusChipStyle(client.nda_status)">NDA: {{ client.nda_status }}</span>
                 <span v-if="client.sow_status" :style="getStatusChipStyle(client.sow_status)">SOW: {{ client.sow_status }}</span>
               </div>
+            </td>
+            <td style="padding: 14px 16px;">
+              <div v-if="client.projects?.length" style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 11px; font-weight: 700; color: var(--ink-2);">Active: {{ client.projects.filter(p => p.pipeline_stage !== 'Project Complete').length }}</span>
+                <span style="font-size: 10px; color: var(--ink-4);">Completed: {{ client.projects.filter(p => p.pipeline_stage === 'Project Complete').length }}</span>
+              </div>
+              <span v-else style="font-size: 11px; color: var(--ink-5);">—</span>
             </td>
             <td style="padding: 14px 16px; font-family: var(--font-mono); font-size: 11px; color: var(--ink-4);">
               {{ new Date(client.created_at).toLocaleDateString() }}
@@ -99,7 +112,7 @@
             </div>
             <div class="col-span-2 md:col-span-1">
               <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Email</label>
-              <input v-model="form.email" type="email" required style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" />
+              <input v-model="form.email" type="email" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" />
             </div>
             <div class="col-span-2 md:col-span-1">
               <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Company</label>
@@ -184,6 +197,15 @@
             <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Due Date</label>
             <input v-model="projectForm.due_date" type="date" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" />
           </div>
+          <div>
+            <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Link Hub Project</label>
+            <select v-model="projectForm.hub_project_id" :disabled="loadingHubProjects" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none; appearance: none; cursor: pointer;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" @change="onHubProjectSelect">
+              <option :value="null">{{ loadingHubProjects ? 'Loading...' : '— No link —' }}</option>
+              <option v-for="p in hubProjects" :key="p.id" :value="p.id">
+                {{ p.project_name }}{{ p.client_name ? ` · ${p.client_name}` : '' }}{{ p.status ? ` (${p.status})` : '' }}
+              </option>
+            </select>
+          </div>
           <label class="flex items-center gap-3" style="padding: 10px 12px; border: 1px solid var(--ink-5); border-radius: 2px; cursor: pointer; background: var(--paper);">
             <input type="checkbox" v-model="projectForm.in_menu_hub" style="width: 14px; height: 14px; accent-color: var(--ink);" />
             <span style="font-size: 13px; color: var(--ink-2);">Added to Menu Hub</span>
@@ -204,6 +226,7 @@
       :project="selectedProject"
       @close="isDetailOpen = false"
       @updated="fetchClients"
+      @open-project="switchToProject"
     />
   </div>
 </template>
@@ -211,6 +234,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { supabase } from '../lib/supabaseClient'
+import { hubSupabase } from '../lib/hubClient'
 import { useConfirmModal } from '../composables/useConfirmModal'
 import ProjectDetail from '../components/ProjectDetail.vue'
 
@@ -228,12 +252,23 @@ const selectedProject = ref(null)
 const showAddProjectModal = ref(false)
 const isSavingProject = ref(false)
 const targetClient = ref(null)
-const projectForm = ref({ title: '', amount_paid: null, amount_owed: null, milestones: '', due_date: '', in_menu_hub: false })
+const projectForm = ref({ title: '', amount_paid: null, amount_owed: null, milestones: '', due_date: '', in_menu_hub: false, hub_project_id: null })
+const hubProjects = ref([])
+const loadingHubProjects = ref(false)
 
-const openAddProject = (client) => {
+const openAddProject = async (client) => {
   targetClient.value = client
-  projectForm.value = { title: '', amount_paid: null, amount_owed: null, milestones: '', due_date: '', in_menu_hub: false }
+  projectForm.value = { title: '', amount_paid: null, amount_owed: null, milestones: '', due_date: '', in_menu_hub: false, hub_project_id: null }
+  loadingHubProjects.value = true
   showAddProjectModal.value = true
+  const { data } = await hubSupabase.from('projects').select('id, project_name, client_name, status').order('created_at', { ascending: false })
+  hubProjects.value = data || []
+  loadingHubProjects.value = false
+}
+
+const onHubProjectSelect = () => {
+  const selected = hubProjects.value.find(p => p.id === projectForm.value.hub_project_id)
+  if (selected) projectForm.value.title = selected.project_name
 }
 
 const saveProject = async () => {
@@ -248,6 +283,7 @@ const saveProject = async () => {
       milestones: projectForm.value.milestones || null,
       due_date: projectForm.value.due_date || null,
       in_menu_hub: projectForm.value.in_menu_hub,
+      hub_project_id: projectForm.value.hub_project_id || null,
     }]).select().single()
     if (error) throw error
     await supabase.from('activity_logs').insert({
@@ -282,10 +318,26 @@ const getStatusChipStyle = (status) => {
 const fetchClients = async () => {
   try {
     loading.value = true
-    const { data, error } = await supabase.from('clients').select('*').order('created_at', { ascending: false })
-    if (error) throw error
-    clients.value = data
+    const [clientsRes, projectsRes] = await Promise.all([
+      supabase.from('clients').select('*').order('created_at', { ascending: false }),
+      supabase.from('projects').select('id, title, pipeline_stage, client_id')
+    ])
+    if (clientsRes.error) throw clientsRes.error
+    const projectsByClient = {}
+    for (const p of (projectsRes.data || [])) {
+      if (!projectsByClient[p.client_id]) projectsByClient[p.client_id] = []
+      projectsByClient[p.client_id].push(p)
+    }
+    clients.value = (clientsRes.data || []).map(c => ({
+      ...c,
+      projects: projectsByClient[c.id] || []
+    }))
   } catch (err) { console.error(err) } finally { loading.value = false }
+}
+
+const switchToProject = (proj) => {
+  const client = selectedProject.value?.client
+  selectedProject.value = { ...proj, client, client_id: client?.id }
 }
 
 const openClientDetail = (client) => {
@@ -324,11 +376,25 @@ const closeModal = () => {
 const saveClient = async () => {
   try {
     isSubmitting.value = true
+    const nullify = (v) => (typeof v === 'string' ? v.trim() || null : v ?? null)
+    const { projects: _projects, ...formFields } = form.value
+    const payload = {
+      ...formFields,
+      email:                nullify(form.value.email),
+      company:              nullify(form.value.company),
+      phone_number:         nullify(form.value.phone_number),
+      country:              nullify(form.value.country),
+      brand_stage:          nullify(form.value.brand_stage),
+      investment_level:     nullify(form.value.investment_level),
+      development_timeline: nullify(form.value.development_timeline),
+      support_level:        nullify(form.value.support_level),
+      primary_issue:        nullify(form.value.primary_issue),
+    }
     if (editingId.value) {
-      const { error } = await supabase.from('clients').update(form.value).eq('id', editingId.value)
+      const { error } = await supabase.from('clients').update(payload).eq('id', editingId.value)
       if (error) throw error
     } else {
-      const { error } = await supabase.from('clients').insert([form.value])
+      const { error } = await supabase.from('clients').insert([payload])
       if (error) throw error
     }
     closeModal()
