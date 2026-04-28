@@ -280,7 +280,7 @@
         <!-- SOW TAB -->
         <div v-if="activeTab === 'SOW'" class="space-y-6 pb-20">
           <template v-if="project?.client">
-            <div v-if="!['Sent', 'Signed'].includes(project.client.sow_status)" style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; padding: 20px;">
+            <div v-if="!project.sow_sent_date" style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; padding: 20px;">
               <div class="flex justify-between items-start" style="margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--bone-edge);">
                 <div>
                   <h3 style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-2); margin: 0 0 3px;">Live SOW Editor</h3>
@@ -308,10 +308,10 @@
             </div>
 
             <div v-else style="padding: 16px; background: var(--positive-soft); border: 1px solid #B8C4A0; border-radius: 4px; font-size: 13px; color: var(--positive); font-weight: 600;">
-              SOW already {{ project.client.sow_status.toLowerCase() }} — content is locked. Use Contracts Log → Reset to re-edit.
+              SOW already sent for this project — content is locked. Use Contracts Log → Reset to re-edit.
             </div>
 
-            <div v-if="!['Sent', 'Signed'].includes(project.client.sow_status)" style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; padding: 16px;">
+            <div v-if="!project.sow_sent_date" style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; padding: 16px;">
               <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0 0 10px;">Sent Outside CRM?</p>
               <p style="font-size: 11px; color: var(--ink-4); margin: 0 0 12px; font-style: italic;">If the SOW was sent via email or another tool, enter the sent date to trigger follow-ups automatically.</p>
               <div class="flex items-center gap-3">
@@ -451,14 +451,14 @@
                       <h4 style="font-family: var(--font-display); font-style: italic; font-size: 17px; color: var(--ink); margin: 0 0 2px; letter-spacing: -0.01em;">{{ proj.title }}</h4>
                       <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-4); margin: 0;">{{ proj.pipeline_stage }}</p>
                     </div>
-                    <span v-if="proj.sow_sent_date" :class="getStatusClass((proj.sow_signed_date || project?.client?.sow_signed_date) ? 'Signed' : 'Sent')">
+                    <span v-if="proj.sow_sent_date || project?.client?.sow_sent_date || ['Sent','Signed'].includes(project?.client?.sow_status)" :class="getStatusClass((proj.sow_signed_date || project?.client?.sow_signed_date) ? 'Signed' : 'Sent')">
                       {{ (proj.sow_signed_date || project?.client?.sow_signed_date) ? 'Signed' : 'Sent' }}
                     </span>
                     <span v-else style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-5);">Draft</span>
                   </div>
 
-                  <div v-if="proj.sow_sent_date" class="space-y-1">
-                    <p style="font-size: 11px; color: var(--ink-3);">Sent: <span style="font-family: var(--font-mono); color: var(--ink-2);">{{ formatDate(proj.sow_sent_date) }}</span></p>
+                  <div v-if="proj.sow_sent_date || project?.client?.sow_sent_date" class="space-y-1">
+                    <p style="font-size: 11px; color: var(--ink-3);">Sent: <span style="font-family: var(--font-mono); color: var(--ink-2);">{{ formatDate(proj.sow_sent_date || project?.client?.sow_sent_date) }}</span></p>
                     <p v-if="proj.sow_signed_date || project?.client?.sow_signed_date" style="font-size: 11px; font-weight: 700; color: var(--positive);">Signed: <span style="font-family: var(--font-mono);">{{ formatDate(proj.sow_signed_date || project?.client?.sow_signed_date) }}</span></p>
                   </div>
 
@@ -669,11 +669,12 @@ const fetchClientProjects = async () => {
   const completed = (all || []).filter(p => p.pipeline_stage === 'Project Complete')
   allClientProjects.value = [...active, ...completed]
 
-  const { data: sow } = await supabase
+  const { data: sow, error: sowErr } = await supabase
     .from('projects')
-    .select('id, title, created_at, pipeline_stage, sow_deliverables, sow_sent_date')
+    .select('*')
     .eq('client_id', props.project.client_id)
     .order('created_at', { ascending: false })
+  if (sowErr) console.error('fetchClientProjects sow:', sowErr.message)
   clientProjects.value = sow || []
 }
 
@@ -688,7 +689,7 @@ const availableDocs = computed(() => {
   } else {
     // Vista proyecto en pipeline: NDA si aún no fue enviado (primer proyecto), siempre SOW
     if (nda !== 'Sent' && nda !== 'Signed') docs.push('NDA')
-    if (sow !== 'Sent' && sow !== 'Signed') docs.push('SOW')
+    if (!props.project?.sow_sent_date) docs.push('SOW')
   }
   return docs
 })
@@ -942,7 +943,7 @@ const saveAndPrepareEmail = async () => {
   if (!props.project?.client) return
   try {
     // Solo guardar campos SOW si se va a enviar el SOW y aún no está enviado/firmado
-    if (selectedDocs.value.includes('SOW') && !['Sent', 'Signed'].includes(props.project.client.sow_status)) {
+    if (selectedDocs.value.includes('SOW') && !props.project.sow_sent_date) {
       const sowContent = {
         sow_deliverables: localEdits.value.sow_deliverables,
         sow_timeline: localEdits.value.sow_timeline,

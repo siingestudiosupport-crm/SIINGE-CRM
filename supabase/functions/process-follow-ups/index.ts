@@ -26,6 +26,45 @@ serve(async (req) => {
   const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
   const DIGEST_TO = 'sierra@siinge.studio'
 
+  // ── Daily guard — shared with schedule-followup-reminder ─────────────────
+  // Whichever function fires first claims the day; all subsequent calls skip.
+  const todayUTC = new Date().toISOString().split('T')[0]
+
+  const { data: claimed } = await supabase
+    .from('app_settings')
+    .update({ value: todayUTC })
+    .eq('key', 'digest_last_sent_date')
+    .neq('value', todayUTC)
+    .select('key')
+
+  if (!claimed?.length) {
+    const { data: existing } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'digest_last_sent_date')
+      .maybeSingle()
+
+    if (existing?.value === todayUTC) {
+      console.log('Digest already sent today — skipping.')
+      return new Response(JSON.stringify({ ok: true, note: 'already sent today' }), {
+        headers: { 'Content-Type': 'application/json' }, status: 200,
+      })
+    }
+
+    if (!existing) {
+      const { error: insertErr } = await supabase
+        .from('app_settings')
+        .insert({ key: 'digest_last_sent_date', value: todayUTC })
+      if (insertErr) {
+        console.log('Insert race — skipping.', insertErr.message)
+        return new Response(JSON.stringify({ ok: true, note: 'race: other process claimed' }), {
+          headers: { 'Content-Type': 'application/json' }, status: 200,
+        })
+      }
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   const now = new Date()
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
