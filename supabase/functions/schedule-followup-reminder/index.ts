@@ -18,12 +18,29 @@ serve(async (req) => {
     )
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 
+    // ── 0. Cooldown — skip if a digest was queued in the last 6 hours ─────────
+    const { data: cdRow } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'digest_last_queued_at')
+      .maybeSingle()
+
+    if (cdRow?.value) {
+      const lastQueued = new Date(cdRow.value)
+      const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000)
+      if (lastQueued > sixHoursAgo) {
+        return new Response(JSON.stringify({ ok: true, note: 'cooldown active, skipped' }), {
+          headers: { 'Content-Type': 'application/json' }, status: 200,
+        })
+      }
+    }
+
     // ── 1. Cancel the previously scheduled digest (if any) ───────────────────
     const { data: setting } = await supabase
       .from('app_settings')
       .select('value')
       .eq('key', 'digest_resend_id')
-      .single()
+      .maybeSingle()
 
     const prevResendId = setting?.value
     if (prevResendId) {
@@ -130,11 +147,15 @@ serve(async (req) => {
     const resendData = await resendRes.json()
     console.log('Digest scheduled:', JSON.stringify(resendData))
 
-    // ── 5. Store new digest ID ────────────────────────────────────────────────
+    // ── 5. Store new digest ID + cooldown timestamp ───────────────────────────
     await supabase
       .from('app_settings')
       .update({ value: resendData.id || null })
       .eq('key', 'digest_resend_id')
+
+    await supabase
+      .from('app_settings')
+      .upsert({ key: 'digest_last_queued_at', value: new Date().toISOString() }, { onConflict: 'key' })
 
     return new Response(JSON.stringify({ ok: true, resend_id: resendData.id, pending: pending.length }), {
       headers: { 'Content-Type': 'application/json' },

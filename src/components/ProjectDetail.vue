@@ -991,7 +991,7 @@ const dispatchEmail = async () => {
         subject: emailData.value.subject,
         html: emailData.value.messageText.split('\n').map(l => l ? `<p style="font-family:sans-serif;color:#374151;margin:0 0 8px">${l}</p>` : '').join('') + emailData.value.buttonsHtml,
         client_id: props.project.client_id,
-        doc_type: selectedDocs.value.join('+')
+        doc_type: selectedDocs.value.join('_')
       }
     })
 
