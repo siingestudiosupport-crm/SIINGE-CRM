@@ -157,6 +157,13 @@ serve(async (req: Request) => {
 
     const data = await res.json()
 
+    if (!res.ok) {
+      return new Response(JSON.stringify({ error: data?.message || data?.name || 'Resend rejected the request', resend: data }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: res.status,
+      })
+    }
+
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,

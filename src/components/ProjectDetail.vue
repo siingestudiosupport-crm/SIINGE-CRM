@@ -674,7 +674,7 @@ const fetchClientProjects = async () => {
     .select('id, title, created_at, pipeline_stage, sow_deliverables, sow_sent_date, sow_signed_date, sow_pdf_path')
     .eq('client_id', props.project.client_id)
     .order('created_at', { ascending: false })
-  clientProjects.value = (sow || []).filter(p => p.sow_deliverables || p.sow_sent_date)
+  clientProjects.value = sow || []
 }
 
 // Declarado ANTES del watch que lo usa para evitar TDZ

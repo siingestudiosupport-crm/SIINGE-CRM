@@ -332,6 +332,10 @@ const fetchClients = async () => {
       ...c,
       projects: projectsByClient[c.id] || []
     }))
+    if (selectedProject.value?.client?.id) {
+      const fresh = clients.value.find(c => c.id === selectedProject.value.client.id)
+      if (fresh) selectedProject.value = { ...selectedProject.value, client: fresh }
+    }
   } catch (err) { console.error(err) } finally { loading.value = false }
 }
 
