@@ -451,19 +451,19 @@
                       <h4 style="font-family: var(--font-display); font-style: italic; font-size: 17px; color: var(--ink); margin: 0 0 2px; letter-spacing: -0.01em;">{{ proj.title }}</h4>
                       <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-4); margin: 0;">{{ proj.pipeline_stage }}</p>
                     </div>
-                    <span v-if="proj.sow_sent_date" :class="getStatusClass(proj.sow_signed_date ? 'Signed' : 'Sent')">
-                      {{ proj.sow_signed_date ? 'Signed' : 'Sent' }}
+                    <span v-if="proj.sow_sent_date" :class="getStatusClass((proj.sow_signed_date || project?.client?.sow_signed_date) ? 'Signed' : 'Sent')">
+                      {{ (proj.sow_signed_date || project?.client?.sow_signed_date) ? 'Signed' : 'Sent' }}
                     </span>
                     <span v-else style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-5);">Draft</span>
                   </div>
 
                   <div v-if="proj.sow_sent_date" class="space-y-1">
                     <p style="font-size: 11px; color: var(--ink-3);">Sent: <span style="font-family: var(--font-mono); color: var(--ink-2);">{{ formatDate(proj.sow_sent_date) }}</span></p>
-                    <p v-if="proj.sow_signed_date" style="font-size: 11px; font-weight: 700; color: var(--positive);">Signed: <span style="font-family: var(--font-mono);">{{ formatDate(proj.sow_signed_date) }}</span></p>
+                    <p v-if="proj.sow_signed_date || project?.client?.sow_signed_date" style="font-size: 11px; font-weight: 700; color: var(--positive);">Signed: <span style="font-family: var(--font-mono);">{{ formatDate(proj.sow_signed_date || project?.client?.sow_signed_date) }}</span></p>
                   </div>
 
-                  <button v-if="proj.sow_signed_date && proj.sow_pdf_path"
-                    @click="downloadFromVault(proj.sow_pdf_path)"
+                  <button v-if="(proj.sow_signed_date || project?.client?.sow_signed_date) && (proj.sow_pdf_path || project?.client?.sow_pdf_path)"
+                    @click="downloadFromVault(proj.sow_pdf_path || project?.client?.sow_pdf_path)"
                     class="w-full flex items-center justify-center gap-3"
                     style="margin-top: 10px; padding: 9px; background: var(--positive-soft); color: var(--positive); border: 1px solid #B8C4A0; border-radius: 2px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; cursor: pointer; transition: opacity 120ms;"
                     @mouseenter="e=>e.currentTarget.style.opacity='0.8'" @mouseleave="e=>e.currentTarget.style.opacity='1'">
@@ -671,7 +671,7 @@ const fetchClientProjects = async () => {
 
   const { data: sow } = await supabase
     .from('projects')
-    .select('id, title, created_at, pipeline_stage, sow_deliverables, sow_sent_date, sow_signed_date, sow_pdf_path')
+    .select('id, title, created_at, pipeline_stage, sow_deliverables, sow_sent_date')
     .eq('client_id', props.project.client_id)
     .order('created_at', { ascending: false })
   clientProjects.value = sow || []
