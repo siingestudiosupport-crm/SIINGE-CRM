@@ -234,16 +234,29 @@
               </div>
 
               <!-- Deliverables list -->
-              <div style="display: flex; flex-direction: column; gap: 2px;">
-                <label
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div
                   v-for="item in deliverableItems" :key="item.model"
-                  style="display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--bone-edge); border-radius: 2px; cursor: pointer; background: var(--bone);"
-                  @mouseenter="e=>e.currentTarget.style.background='var(--paper-2)'"
-                  @mouseleave="e=>e.currentTarget.style.background='var(--bone)'"
+                  style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 2px; padding: 12px;"
                 >
-                  <input type="checkbox" v-model="localEdits[item.model]" style="width: 14px; height: 14px; accent-color: var(--ink); flex-shrink: 0; cursor: pointer;" />
-                  <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-2);">{{ item.label }}</span>
-                </label>
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                      <input type="checkbox" v-model="localEdits[item.model]" style="width: 14px; height: 14px; accent-color: var(--ink);" />
+                      <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-2);">{{ item.label }}</span>
+                    </label>
+                    <div v-if="item.dueField && localEdits[item.model]" style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 150px;">
+                      <span style="font-size: 9px; color: var(--ink-4); text-transform: uppercase; letter-spacing: 0.08em;">Due Date</span>
+                      <input type="date" v-model="localEdits[item.dueField]" style="width: 150px; padding: 7px 9px; border: 1px solid var(--ink-5); border-radius: 2px; background: var(--paper); color: var(--ink); font-size: 12px;" />
+                    </div>
+                  </div>
+
+                  <div v-if="item.productDev && localEdits.deliverable_product_dev" style="margin-top: 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+                    <div v-for="sub in productDevelopmentDueFields" :key="sub.model" style="display: flex; flex-direction: column; gap: 4px;">
+                      <span style="font-size: 9px; color: var(--ink-4); text-transform: uppercase; letter-spacing: 0.08em;">{{ sub.label }}</span>
+                      <input type="date" v-model="localEdits[sub.model]" style="width: 100%; padding: 7px 9px; border: 1px solid var(--ink-5); border-radius: 2px; background: var(--paper); color: var(--ink); font-size: 12px;" />
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <!-- Notes -->
@@ -304,6 +317,19 @@
                   <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">3. Fees & Payment (Section 5)</label>
                   <textarea v-model="localEdits.sow_fees_payment" rows="8" style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink-2); background: var(--paper); outline: none; resize: vertical; line-height: 1.6;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'"></textarea>
                 </div>
+              </div>
+              <div style="display:flex; justify-content:flex-end; margin-top: 18px;">
+                <button
+                  @click="saveSowSection"
+                  :disabled="isSaving"
+                  style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 10px 22px; background: var(--ink); color: var(--paper); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer; transition: opacity 120ms; display: inline-flex; align-items: center; gap: 8px;"
+                  :style="isSaving ? 'opacity: 0.5; cursor: not-allowed;' : ''"
+                  @mouseenter="e => !isSaving && (e.currentTarget.style.opacity = '0.75')"
+                  @mouseleave="e => e.currentTarget.style.opacity = '1'"
+                >
+                  <svg v-if="isSaving" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                  {{ isSaving ? 'Saving...' : 'Save Changes' }}
+                </button>
               </div>
             </div>
 
@@ -558,6 +584,38 @@
       </div>
     </div>
 
+    <div v-if="showSowPreviewModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4" style="background: rgba(14,14,12,0.5);">
+      <div class="w-full max-w-2xl overflow-hidden flex flex-col animate-slide-up" style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; box-shadow: var(--shadow-3);">
+
+        <div class="px-8 py-5 flex justify-between items-center" style="background: var(--ink); border-bottom: 1px solid rgba(250,247,242,0.1);">
+          <div class="flex items-center gap-3">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--paper)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/></svg>
+            <h3 style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--paper); margin: 0;">SOW Preview</h3>
+          </div>
+          <button @click="closeSowPreview()" style="color: rgba(250,247,242,0.5); background: none; border: none; font-size: 22px; cursor: pointer; line-height: 1; padding: 0;">&times;</button>
+        </div>
+
+        <div class="p-8 flex-1 space-y-6 overflow-y-auto" style="min-height: 520px;">
+          <div v-if="isGeneratingSowPreview" class="h-full flex items-center justify-center text-sm text-gray-500">Generating PDF preview…</div>
+          <div v-else-if="pdfPreviewError" class="h-full flex items-center justify-center text-sm text-red-600">{{ pdfPreviewError }}</div>
+          <div v-else class="h-full">
+            <iframe v-if="pdfPreviewUrl" :src="pdfPreviewUrl + '#toolbar=0&navpanes=0&scrollbar=0'" class="w-full h-full" frameborder="0" style="min-height: 500px; border: 1px solid rgba(15,23,42,0.08); border-radius: 8px;"></iframe>
+            <div v-else class="h-full flex items-center justify-center text-sm text-gray-500">No preview available.</div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3" style="padding: 20px 32px; border-top: 1px solid var(--bone-edge); background: var(--paper-2);">
+          <button @click="closeSowPreview()" style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 20px; background: transparent; color: var(--ink); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer;">
+            Back to Edit
+          </button>
+          <button @click="continueFromSowPreview" :disabled="isSaving" style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 24px; background: var(--ink); color: var(--paper); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer; transition: opacity 120ms;" :style="isSaving ? 'opacity: 0.5; cursor:not-allowed;' : ''">
+            {{ isSaving ? 'Saving...' : 'Continue to Dispatch' }}
+          </button>
+        </div>
+
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -566,6 +624,7 @@ import { ref, computed, watch } from 'vue'
 import { supabase } from '../lib/supabaseClient'
 import { hubSupabase } from '../lib/hubClient'
 import { useConfirmModal } from '../composables/useConfirmModal'
+import { PDFDocument } from 'pdf-lib'
 
 const props = defineProps({
   isOpen: Boolean,
@@ -592,6 +651,10 @@ const flashSaved = () => {
 }
 const selectedDocs = ref(/** @type {string[]} */ ([]))
 const emailData = ref({ subject: '', messageText: '', buttonsHtml: '' })
+const showSowPreviewModal = ref(false)
+const pdfPreviewUrl = ref('')
+const isGeneratingSowPreview = ref(false)
+const pdfPreviewError = ref('')
 
 const hubStatus = ref(null)
 
@@ -616,33 +679,67 @@ const fetchHubStatus = async () => {
 const isAddingToHub = ref(false)
 
 const deliverableItems = [
-  { label: 'Trend / Market Analysis',       model: 'deliverable_trend_analysis' },
-  { label: 'Apparel Design',                model: 'deliverable_design' },
-  { label: 'Branding / Packaging Design',   model: 'deliverable_branding' },
-  { label: 'Tech Pack',                     model: 'deliverable_tech_pack' },
-  { label: 'Product Development Mgmt',      model: 'deliverable_product_dev' },
-  { label: 'In House Patternmaking',        model: 'deliverable_in_house_patternmaking' },
-  { label: 'In House Proto',               model: 'deliverable_in_house_proto' },
-  { label: 'In House Manufacturing',        model: 'deliverable_in_house_manufacturing' },
+  { label: 'Trend / Market Analysis',       model: 'deliverable_trend_analysis', dueField: 'deliverable_trend_analysis_due' },
+  { label: 'Apparel Design',                model: 'deliverable_design', dueField: 'deliverable_design_due' },
+  { label: 'Branding / Packaging Design',   model: 'deliverable_branding', dueField: 'deliverable_branding_due' },
+  { label: 'Tech Pack',                     model: 'deliverable_tech_pack', dueField: 'deliverable_tech_pack_due' },
+  { label: 'Product Development Mgmt',      model: 'deliverable_product_dev', productDev: true },
+  { label: 'In House Patternmaking',        model: 'deliverable_in_house_patternmaking', dueField: 'deliverable_in_house_patternmaking_due' },
+  { label: 'In House Proto',               model: 'deliverable_in_house_proto', dueField: 'deliverable_in_house_proto_due' },
+  { label: 'In House Manufacturing',        model: 'deliverable_in_house_manufacturing', dueField: 'deliverable_in_house_manufacturing_due' },
 ]
 
+const productDevelopmentDueFields = [
+  { label: 'Manu Quotes Due', model: 'deliverable_manu_quotes_due' },
+  { label: 'Initial Sample Due', model: 'deliverable_initial_sample_due' },
+  { label: 'Approved Sample Due', model: 'deliverable_approved_sample_due' },
+  { label: 'Size Range Approval Due', model: 'deliverable_size_range_due' },
+  { label: 'Bulk Due', model: 'deliverable_bulk_due' },
+]
+
+const buildLocalEdits = (p) => {
+  const c = p?.client || {}
+  return {
+    pipeline_stage: p?.pipeline_stage || '',
+    proposal_value: p?.proposal_value || null,
+    internal_notes: p?.internal_notes || '',
+    loss_reason: p?.loss_reason || '',
+    client_tier: c?.client_tier || '',
+    sow_deliverables: p?.sow_deliverables || defaultDeliverables,
+    sow_timeline: p?.sow_timeline || defaultTimeline,
+    sow_fees_payment: p?.sow_fees_payment || defaultFees,
+    amount_paid: p?.amount_paid || null,
+    amount_owed: p?.amount_owed || null,
+    milestones: p?.milestones || '',
+    due_date: p?.due_date || '',
+    in_menu_hub: p?.in_menu_hub || false,
+    snooze_until: p?.snooze_until ? p.snooze_until.substring(0, 10) : '',
+    manual_sow_date: '',
+    deliverable_trend_analysis: p?.deliverable_trend_analysis || false,
+    deliverable_trend_analysis_due: p?.deliverable_trend_analysis_due || '',
+    deliverable_design: p?.deliverable_design || false,
+    deliverable_design_due: p?.deliverable_design_due || '',
+    deliverable_tech_pack: p?.deliverable_tech_pack || false,
+    deliverable_tech_pack_due: p?.deliverable_tech_pack_due || '',
+    deliverable_product_dev: p?.deliverable_product_dev || false,
+    deliverable_manu_quotes_due: p?.deliverable_manu_quotes_due || '',
+    deliverable_initial_sample_due: p?.deliverable_initial_sample_due || '',
+    deliverable_approved_sample_due: p?.deliverable_approved_sample_due || '',
+    deliverable_size_range_due: p?.deliverable_size_range_due || '',
+    deliverable_bulk_due: p?.deliverable_bulk_due || '',
+    deliverable_branding: p?.deliverable_branding || false,
+    deliverable_branding_due: p?.deliverable_branding_due || '',
+    deliverable_in_house_patternmaking: p?.deliverable_in_house_patternmaking || false,
+    deliverable_in_house_patternmaking_due: p?.deliverable_in_house_patternmaking_due || '',
+    deliverable_in_house_proto: p?.deliverable_in_house_proto || false,
+    deliverable_in_house_proto_due: p?.deliverable_in_house_proto_due || '',
+    deliverable_in_house_manufacturing: p?.deliverable_in_house_manufacturing || false,
+    deliverable_in_house_manufacturing_due: p?.deliverable_in_house_manufacturing_due || '',
+  }
+}
+
 // Copia local de los campos editables — nunca mutamos la prop directamente
-const localEdits = ref({
-  pipeline_stage: '', proposal_value: null, internal_notes: '',
-  loss_reason: '', client_tier: '',
-  sow_deliverables: '', sow_timeline: '', sow_fees_payment: '',
-  amount_paid: null, amount_owed: null, milestones: '', due_date: '', in_menu_hub: false,
-  snooze_until: '', manual_sow_date: '',
-  deliverable_trend_analysis: false, deliverable_branding: false,
-  deliverable_design: false, deliverable_design_due: '',
-  deliverable_tech_pack: false, deliverable_tech_pack_due: '',
-  deliverable_product_dev: false,
-  deliverable_manu_quotes_due: '', deliverable_initial_sample_due: '',
-  deliverable_approved_sample_due: '', deliverable_size_range_due: '', deliverable_bulk_due: '',
-  deliverable_in_house_patternmaking: false,
-  deliverable_in_house_proto: false,
-  deliverable_in_house_manufacturing: false,
-})
+const localEdits = ref(buildLocalEdits(props.project))
 
 const stages = [
   'Directory View', 'Intake Form Received', 'Call Booked', 'Proposal Sent',
@@ -696,40 +793,7 @@ watch(() => props.project?.id, async (newId, oldId) => {
   allClientProjects.value = []
   clientProjects.value = []
   if (newId && newId !== oldId && props.isOpen && props.project) {
-    const p = props.project
-    const c = p.client
-    localEdits.value = {
-      pipeline_stage: p.pipeline_stage || '',
-      proposal_value: p.proposal_value || null,
-      internal_notes: p.internal_notes || '',
-      loss_reason: p.loss_reason || '',
-      client_tier: c?.client_tier || '',
-      sow_deliverables: defaultDeliverables,
-      sow_timeline: defaultTimeline,
-      sow_fees_payment: defaultFees,
-      amount_paid: p.amount_paid || null,
-      amount_owed: p.amount_owed || null,
-      milestones: p.milestones || '',
-      due_date: p.due_date || '',
-      in_menu_hub: p.in_menu_hub || false,
-      snooze_until: p.snooze_until ? p.snooze_until.substring(0, 10) : '',
-      manual_sow_date: '',
-      deliverable_design: p.deliverable_design || false,
-      deliverable_design_due: p.deliverable_design_due || '',
-      deliverable_tech_pack: p.deliverable_tech_pack || false,
-      deliverable_tech_pack_due: p.deliverable_tech_pack_due || '',
-      deliverable_product_dev: p.deliverable_product_dev || false,
-      deliverable_manu_quotes_due: p.deliverable_manu_quotes_due || '',
-      deliverable_initial_sample_due: p.deliverable_initial_sample_due || '',
-      deliverable_approved_sample_due: p.deliverable_approved_sample_due || '',
-      deliverable_size_range_due: p.deliverable_size_range_due || '',
-      deliverable_bulk_due: p.deliverable_bulk_due || '',
-      deliverable_trend_analysis: p.deliverable_trend_analysis || false,
-      deliverable_branding: p.deliverable_branding || false,
-      deliverable_in_house_patternmaking: p.deliverable_in_house_patternmaking || false,
-      deliverable_in_house_proto: p.deliverable_in_house_proto || false,
-      deliverable_in_house_manufacturing: p.deliverable_in_house_manufacturing || false,
-    }
+    localEdits.value = buildLocalEdits(props.project)
     selectedDocs.value = availableDocs.value
     fetchHubStatus()
   }
@@ -740,35 +804,7 @@ watch(() => props.project?.id, async (newId, oldId) => {
 
 watch(() => props.isOpen, (newVal) => {
   if (newVal && props.project) {
-    const p = props.project
-    const c = p.client
-    localEdits.value = {
-      pipeline_stage: p.pipeline_stage || '',
-      proposal_value: p.proposal_value || null,
-      internal_notes: p.internal_notes || '',
-      loss_reason: p.loss_reason || '',
-      client_tier: c?.client_tier || '',
-      sow_deliverables: defaultDeliverables,
-      sow_timeline: defaultTimeline,
-      sow_fees_payment: defaultFees,
-      amount_paid: p.amount_paid || null,
-      amount_owed: p.amount_owed || null,
-      milestones: p.milestones || '',
-      due_date: p.due_date || '',
-      in_menu_hub: p.in_menu_hub || false,
-      snooze_until: p.snooze_until ? p.snooze_until.substring(0, 10) : '',
-      manual_sow_date: '',
-      deliverable_design: p.deliverable_design || false,
-      deliverable_design_due: p.deliverable_design_due || '',
-      deliverable_tech_pack: p.deliverable_tech_pack || false,
-      deliverable_tech_pack_due: p.deliverable_tech_pack_due || '',
-      deliverable_product_dev: p.deliverable_product_dev || false,
-      deliverable_manu_quotes_due: p.deliverable_manu_quotes_due || '',
-      deliverable_initial_sample_due: p.deliverable_initial_sample_due || '',
-      deliverable_approved_sample_due: p.deliverable_approved_sample_due || '',
-      deliverable_size_range_due: p.deliverable_size_range_due || '',
-      deliverable_bulk_due: p.deliverable_bulk_due || '',
-    }
+    localEdits.value = buildLocalEdits(props.project)
     selectedDocs.value = availableDocs.value
     if (!props.project?.id) fetchClientProjects()
     fetchHubStatus()
@@ -832,10 +868,20 @@ const updateOverview = async () => {
       deliverable_tech_pack_due: localEdits.value.deliverable_tech_pack_due || null,
       deliverable_product_dev: localEdits.value.deliverable_product_dev,
       deliverable_trend_analysis: localEdits.value.deliverable_trend_analysis,
+      deliverable_trend_analysis_due: localEdits.value.deliverable_trend_analysis_due || null,
       deliverable_branding: localEdits.value.deliverable_branding,
+      deliverable_branding_due: localEdits.value.deliverable_branding_due || null,
       deliverable_in_house_patternmaking: localEdits.value.deliverable_in_house_patternmaking,
+      deliverable_in_house_patternmaking_due: localEdits.value.deliverable_in_house_patternmaking_due || null,
       deliverable_in_house_proto: localEdits.value.deliverable_in_house_proto,
+      deliverable_in_house_proto_due: localEdits.value.deliverable_in_house_proto_due || null,
       deliverable_in_house_manufacturing: localEdits.value.deliverable_in_house_manufacturing,
+      deliverable_in_house_manufacturing_due: localEdits.value.deliverable_in_house_manufacturing_due || null,
+      deliverable_manu_quotes_due: localEdits.value.deliverable_manu_quotes_due || null,
+      deliverable_initial_sample_due: localEdits.value.deliverable_initial_sample_due || null,
+      deliverable_approved_sample_due: localEdits.value.deliverable_approved_sample_due || null,
+      deliverable_size_range_due: localEdits.value.deliverable_size_range_due || null,
+      deliverable_bulk_due: localEdits.value.deliverable_bulk_due || null,
     }
     const { error: updateErr } = await supabase.from('projects').update(updates).eq('id', props.project.id)
     if (updateErr) throw updateErr
@@ -847,6 +893,90 @@ const updateOverview = async () => {
   } catch (e) {
     console.error("Error updating overview:", e)
     await showAlert('Error saving changes: ' + (e.message || e), 'Save Failed')
+  } finally {
+    isSaving.value = false
+  }
+}
+
+const saveSowContent = async () => {
+  if (!props.project?.id || !props.project?.client_id) return
+  const sowContent = {
+    sow_deliverables: localEdits.value.sow_deliverables,
+    sow_timeline: localEdits.value.sow_timeline,
+    sow_fees_payment: localEdits.value.sow_fees_payment,
+  }
+  const { error: projErr } = await supabase.from('projects').update(sowContent).eq('id', props.project.id)
+  if (projErr) throw projErr
+  const { error: clientErr } = await supabase.from('clients').update(sowContent).eq('id', props.project.client_id)
+  if (clientErr) throw clientErr
+}
+
+const formatPdfDate = (iso) => {
+  if (!iso) return ''
+  return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })
+}
+
+const buildSowPdf = async (forDownload = false, flatten = true) => {
+  if (!props.project?.client) throw new Error('Missing client for SOW preview')
+  const url = '/sow.pdf'
+  const existingPdfBytes = await fetch(url).then(res => res.arrayBuffer())
+  const pdfDoc = await PDFDocument.load(existingPdfBytes)
+  const pdfForm = pdfDoc.getForm()
+  const client = props.project.client
+
+  const fillField = (fieldName, value) => {
+    try {
+      const field = pdfForm.getTextField(fieldName)
+      if (field) field.setText(String(value || ''))
+    } catch (e) {
+      console.warn('Field not found in PDF:', fieldName)
+    }
+  }
+
+  fillField('date_1', formatPdfDate(props.project.client?.sow_sent_date || ''))
+  fillField('date_3', formatPdfDate(props.project.client?.sow_sent_date || ''))
+  fillField('company_name', props.project.client.company || '')
+  fillField('full_address', props.project.client.full_address || '')
+  fillField('business_name', props.project.client.business_name || '')
+  fillField('client_name', props.project.client.name || '')
+  fillField('client_title', props.project.client.title || '')
+  fillField('deliverables', localEdits.value.sow_deliverables)
+  fillField('timeline', localEdits.value.sow_timeline)
+  fillField('fees_payment', localEdits.value.sow_fees_payment)
+  fillField('date_2', formatPdfDate(props.project.client?.sow_signed_date || ''))
+
+  if (flatten) pdfForm.flatten()
+  return pdfDoc.save()
+}
+
+const generateSowPdfPreview = async () => {
+  if (!props.project?.client) return
+  isGeneratingSowPreview.value = true
+  pdfPreviewError.value = ''
+  try {
+    const pdfBytes = await buildSowPdf(false, true)
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' })
+    if (pdfPreviewUrl.value) URL.revokeObjectURL(pdfPreviewUrl.value)
+    pdfPreviewUrl.value = URL.createObjectURL(blob)
+    showSowPreviewModal.value = true
+  } catch (e) {
+    console.error('Error generating SOW PDF preview:', e)
+    pdfPreviewError.value = e.message || 'Unable to build PDF preview.'
+  } finally {
+    isGeneratingSowPreview.value = false
+  }
+}
+
+const saveSowSection = async () => {
+  if (!props.project?.id) return
+  isSaving.value = true
+  try {
+    await saveSowContent()
+    flashSaved()
+    emit('updated')
+  } catch (e) {
+    console.error('Error saving SOW:', e)
+    await showAlert('Error saving SOW: ' + (e.message || e), 'Save Failed')
   } finally {
     isSaving.value = false
   }
@@ -883,10 +1013,14 @@ const addToHub = async () => {
   }
 }
 
-const resetSowToTemplates = () => {
+const resetSowToTemplates = async () => {
   localEdits.value.sow_deliverables = defaultDeliverables
   localEdits.value.sow_timeline = defaultTimeline
   localEdits.value.sow_fees_payment = defaultFees
+
+  if (showSowPreviewModal.value) {
+    await generateSowPdfPreview()
+  }
 }
 
 const deleteProject = async () => {
@@ -926,44 +1060,59 @@ const resetDocument = async (type) => {
   emit('updated')
 }
 
+const buildEmailData = () => {
+  const baseUrl = window.location.origin
+  const clientName = props.project.client.name
+  const docsText = selectedDocs.value.join(' and ')
+  emailData.value.subject = `Document Request: ${docsText} from SIINGE STUDIO`
+  emailData.value.messageText = `Hi ${clientName},\n\nPlease review and sign the requested documents for our upcoming collaboration. Click the buttons below to access your secure portal:\n\nBest regards,\nSIINGE STUDIO Team`
+
+  let buttonsHtml = `<div style="margin: 10px 0;">`
+  if (selectedDocs.value.includes('NDA')) {
+    const link = `${baseUrl}/portal/${props.project.client_id}/nda`
+    buttonsHtml += `<a href="${link}" style="display:inline-block; margin-bottom:12px; margin-right:12px; padding:15px 28px; background-color:#1e293b; color:#ffffff; text-decoration:none; border-radius:10px; font-weight:bold; font-family:sans-serif; font-size: 14px;">Review & Sign NDA</a>`
+  }
+  if (selectedDocs.value.includes('SOW')) {
+    const link = `${baseUrl}/portal/${props.project.client_id}/sow`
+    buttonsHtml += `<a href="${link}" style="display:inline-block; margin-bottom:12px; padding:15px 28px; background-color:#2563eb; color:#ffffff; text-decoration:none; border-radius:10px; font-weight:bold; font-family:sans-serif; font-size: 14px;">Review & Sign SOW</a>`
+  }
+  buttonsHtml += `</div>`
+  emailData.value.buttonsHtml = buttonsHtml
+}
+
 const saveAndPrepareEmail = async () => {
   if (!props.project?.client) return
   try {
-    // Solo guardar campos SOW si se va a enviar el SOW y aún no está enviado/firmado
-    if (selectedDocs.value.includes('SOW') && !props.project.sow_sent_date) {
-      const sowContent = {
-        sow_deliverables: localEdits.value.sow_deliverables,
-        sow_timeline: localEdits.value.sow_timeline,
-        sow_fees_payment: localEdits.value.sow_fees_payment,
-      }
-      // Guarda en proyecto (fuente de verdad)
-      const { error: projErr } = await supabase.from('projects').update(sowContent).eq('id', props.project.id)
-      if (projErr) throw projErr
-      // Copia al cliente para que el portal de firma pueda leerlo
-      const { error: clientErr } = await supabase.from('clients').update(sowContent).eq('id', props.project.client_id)
-      if (clientErr) throw clientErr
-    }
-
-    const baseUrl = window.location.origin
-    const clientName = props.project.client.name
-    const docsText = selectedDocs.value.join(' and ')
-    emailData.value.subject = `Document Request: ${docsText} from SIINGE STUDIO`
-    emailData.value.messageText = `Hi ${clientName},\n\nPlease review and sign the requested documents for our upcoming collaboration. Click the buttons below to access your secure portal:\n\nBest regards,\nSIINGE STUDIO Team`
-
-    let buttonsHtml = `<div style="margin: 10px 0;">`
-    if (selectedDocs.value.includes('NDA')) {
-      const link = `${baseUrl}/portal/${props.project.client_id}/nda`
-      buttonsHtml += `<a href="${link}" style="display:inline-block; margin-bottom:12px; margin-right:12px; padding:15px 28px; background-color:#1e293b; color:#ffffff; text-decoration:none; border-radius:10px; font-weight:bold; font-family:sans-serif; font-size: 14px;">Review & Sign NDA</a>`
-    }
+    buildEmailData()
     if (selectedDocs.value.includes('SOW')) {
-      const link = `${baseUrl}/portal/${props.project.client_id}/sow`
-      buttonsHtml += `<a href="${link}" style="display:inline-block; margin-bottom:12px; padding:15px 28px; background-color:#2563eb; color:#ffffff; text-decoration:none; border-radius:10px; font-weight:bold; font-family:sans-serif; font-size: 14px;">Review & Sign SOW</a>`
+      await saveSowContent()
+      await generateSowPdfPreview()
+      return
     }
-    buttonsHtml += `</div>`
-    emailData.value.buttonsHtml = buttonsHtml
     showEmailModal.value = true
   } catch (e) {
-    await showAlert('Critical error saving SOW: ' + e.message, 'Error')
+    await showAlert('Critical error preparing dispatch: ' + (e.message || e), 'Error')
+  }
+}
+
+const closeSowPreview = () => {
+  showSowPreviewModal.value = false
+  if (pdfPreviewUrl.value) {
+    URL.revokeObjectURL(pdfPreviewUrl.value)
+    pdfPreviewUrl.value = ''
+  }
+}
+
+const continueFromSowPreview = async () => {
+  if (!props.project?.client) return
+  try {
+    if (selectedDocs.value.includes('SOW') && !props.project.sow_sent_date) {
+      await saveSowContent()
+    }
+    closeSowPreview()
+    showEmailModal.value = true
+  } catch (e) {
+    await showAlert('Critical error saving SOW: ' + (e.message || e), 'Error')
   }
 }
 
@@ -1021,12 +1170,18 @@ const dispatchEmail = async () => {
 
 const getNextMilestone = (proj) => {
   const candidates = [
-    { label: 'Design',              date: proj.deliverable_design     && proj.deliverable_design_due },
-    { label: 'Tech Pack',           date: proj.deliverable_tech_pack  && proj.deliverable_tech_pack_due },
-    { label: 'Manu Quotes',         date: proj.deliverable_product_dev && proj.deliverable_manu_quotes_due },
-    { label: 'Initial Sample',      date: proj.deliverable_product_dev && proj.deliverable_initial_sample_due },
-    { label: 'Size Range Approval', date: proj.deliverable_product_dev && proj.deliverable_size_range_due },
-    { label: 'Bulk',                date: proj.deliverable_product_dev && proj.deliverable_bulk_due },
+    { label: 'Trend Analysis',          date: proj.deliverable_trend_analysis && proj.deliverable_trend_analysis_due },
+    { label: 'Design',                  date: proj.deliverable_design && proj.deliverable_design_due },
+    { label: 'Branding',                date: proj.deliverable_branding && proj.deliverable_branding_due },
+    { label: 'Tech Pack',               date: proj.deliverable_tech_pack && proj.deliverable_tech_pack_due },
+    { label: 'Manu Quotes',             date: proj.deliverable_product_dev && proj.deliverable_manu_quotes_due },
+    { label: 'Initial Sample',          date: proj.deliverable_product_dev && proj.deliverable_initial_sample_due },
+    { label: 'Approved Sample',         date: proj.deliverable_product_dev && proj.deliverable_approved_sample_due },
+    { label: 'Size Range Approval',     date: proj.deliverable_product_dev && proj.deliverable_size_range_due },
+    { label: 'Bulk',                    date: proj.deliverable_product_dev && proj.deliverable_bulk_due },
+    { label: 'Patternmaking',           date: proj.deliverable_in_house_patternmaking && proj.deliverable_in_house_patternmaking_due },
+    { label: 'Proto',                   date: proj.deliverable_in_house_proto && proj.deliverable_in_house_proto_due },
+    { label: 'Manufacturing',           date: proj.deliverable_in_house_manufacturing && proj.deliverable_in_house_manufacturing_due },
   ].filter(c => c.date)
   if (!candidates.length) return null
   candidates.sort((a, b) => new Date(a.date) - new Date(b.date))

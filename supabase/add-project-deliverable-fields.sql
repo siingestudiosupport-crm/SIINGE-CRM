@@ -3,6 +3,7 @@
 
 ALTER TABLE projects
   ADD COLUMN IF NOT EXISTS deliverable_trend_analysis boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS deliverable_trend_analysis_due date,
   ADD COLUMN IF NOT EXISTS deliverable_design boolean DEFAULT false,
   ADD COLUMN IF NOT EXISTS deliverable_design_due date,
   ADD COLUMN IF NOT EXISTS deliverable_tech_pack boolean DEFAULT false,
@@ -14,6 +15,10 @@ ALTER TABLE projects
   ADD COLUMN IF NOT EXISTS deliverable_size_range_due date,
   ADD COLUMN IF NOT EXISTS deliverable_bulk_due date,
   ADD COLUMN IF NOT EXISTS deliverable_branding boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS deliverable_branding_due date,
   ADD COLUMN IF NOT EXISTS deliverable_in_house_patternmaking boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS deliverable_in_house_patternmaking_due date,
   ADD COLUMN IF NOT EXISTS deliverable_in_house_proto boolean DEFAULT false,
-  ADD COLUMN IF NOT EXISTS deliverable_in_house_manufacturing boolean DEFAULT false;
+  ADD COLUMN IF NOT EXISTS deliverable_in_house_proto_due date,
+  ADD COLUMN IF NOT EXISTS deliverable_in_house_manufacturing boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS deliverable_in_house_manufacturing_due date;
