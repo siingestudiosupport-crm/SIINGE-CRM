@@ -621,7 +621,6 @@ const deliverableItems = [
   { label: 'Branding / Packaging Design',   model: 'deliverable_branding' },
   { label: 'Tech Pack',                     model: 'deliverable_tech_pack' },
   { label: 'Product Development Mgmt',      model: 'deliverable_product_dev' },
-  { label: 'Product Analysis × Refinement', model: 'deliverable_analysis' },
   { label: 'In House Patternmaking',        model: 'deliverable_in_house_patternmaking' },
   { label: 'In House Proto',               model: 'deliverable_in_house_proto' },
   { label: 'In House Manufacturing',        model: 'deliverable_in_house_manufacturing' },
@@ -640,7 +639,6 @@ const localEdits = ref({
   deliverable_product_dev: false,
   deliverable_manu_quotes_due: '', deliverable_initial_sample_due: '',
   deliverable_approved_sample_due: '', deliverable_size_range_due: '', deliverable_bulk_due: '',
-  deliverable_analysis: false, deliverable_analysis_due: '',
   deliverable_in_house_patternmaking: false,
   deliverable_in_house_proto: false,
   deliverable_in_house_manufacturing: false,
@@ -726,8 +724,6 @@ watch(() => props.project?.id, async (newId, oldId) => {
       deliverable_approved_sample_due: p.deliverable_approved_sample_due || '',
       deliverable_size_range_due: p.deliverable_size_range_due || '',
       deliverable_bulk_due: p.deliverable_bulk_due || '',
-      deliverable_analysis: p.deliverable_analysis || false,
-      deliverable_analysis_due: p.deliverable_analysis_due || '',
       deliverable_trend_analysis: p.deliverable_trend_analysis || false,
       deliverable_branding: p.deliverable_branding || false,
       deliverable_in_house_patternmaking: p.deliverable_in_house_patternmaking || false,
@@ -772,8 +768,6 @@ watch(() => props.isOpen, (newVal) => {
       deliverable_approved_sample_due: p.deliverable_approved_sample_due || '',
       deliverable_size_range_due: p.deliverable_size_range_due || '',
       deliverable_bulk_due: p.deliverable_bulk_due || '',
-      deliverable_analysis: p.deliverable_analysis || false,
-      deliverable_analysis_due: p.deliverable_analysis_due || '',
     }
     selectedDocs.value = availableDocs.value
     if (!props.project?.id) fetchClientProjects()
@@ -842,8 +836,6 @@ const updateOverview = async () => {
       deliverable_approved_sample_due: localEdits.value.deliverable_approved_sample_due || null,
       deliverable_size_range_due: localEdits.value.deliverable_size_range_due || null,
       deliverable_bulk_due: localEdits.value.deliverable_bulk_due || null,
-      deliverable_analysis: localEdits.value.deliverable_analysis,
-      deliverable_analysis_due: localEdits.value.deliverable_analysis_due || null,
       deliverable_trend_analysis: localEdits.value.deliverable_trend_analysis,
       deliverable_branding: localEdits.value.deliverable_branding,
       deliverable_in_house_patternmaking: localEdits.value.deliverable_in_house_patternmaking,
@@ -1041,7 +1033,6 @@ const getNextMilestone = (proj) => {
     { label: 'Approved Sample',     date: proj.deliverable_product_dev && proj.deliverable_approved_sample_due },
     { label: 'Size Range Approval', date: proj.deliverable_product_dev && proj.deliverable_size_range_due },
     { label: 'Bulk',                date: proj.deliverable_product_dev && proj.deliverable_bulk_due },
-    { label: 'Product Analysis',    date: proj.deliverable_analysis   && proj.deliverable_analysis_due },
   ].filter(c => c.date)
   if (!candidates.length) return null
   candidates.sort((a, b) => new Date(a.date) - new Date(b.date))
