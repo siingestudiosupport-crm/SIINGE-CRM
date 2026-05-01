@@ -143,7 +143,8 @@ serve(async (req: Request) => {
       body: JSON.stringify({
         from: 'Sierra | SIINGE STUDIO <sierra@siinge.studio>',
         to: [to],
-        cc: ['sierra@siinge.studio'], // CC AUTOMÁTICO PARA TI
+        // Follow-ups are covered by the daily digest — skip CC to avoid flooding
+        ...(doc_type !== 'followup' ? { cc: ['sierra@siinge.studio'] } : {}),
         subject: subject,
         html: finalHtml,
         // ETIQUETAS PARA QUE EL WEBHOOK SEPA QUÉ DOCUMENTO SE ABRIÓ

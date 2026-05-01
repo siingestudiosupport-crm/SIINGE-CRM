@@ -66,7 +66,9 @@
             <td style="padding: 14px 16px;">
               <div class="flex flex-col gap-1">
                 <span v-if="client.nda_status" :style="getStatusChipStyle(client.nda_status)">NDA: {{ client.nda_status }}</span>
-                <span v-if="client.sow_status" :style="getStatusChipStyle(client.sow_status)">SOW: {{ client.sow_status }}</span>
+                <span v-for="proj in client.projects?.filter(p => p.sow_status)" :key="`${client.id}-${proj.id}`" :style="getStatusChipStyle(proj.sow_status)" style="font-size: 10px;">
+                  SOW ({{ proj.title }}): {{ proj.sow_status }}
+                </span>
               </div>
             </td>
             <td style="padding: 14px 16px;">
@@ -320,7 +322,7 @@ const fetchClients = async () => {
     loading.value = true
     const [clientsRes, projectsRes] = await Promise.all([
       supabase.from('clients').select('*').order('created_at', { ascending: false }),
-      supabase.from('projects').select('id, title, pipeline_stage, client_id')
+      supabase.from('projects').select('id, title, pipeline_stage, client_id, sow_status, sow_sent_date, sow_signed_date')
     ])
     if (clientsRes.error) throw clientsRes.error
     const projectsByClient = {}

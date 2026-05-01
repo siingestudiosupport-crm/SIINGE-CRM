@@ -162,24 +162,38 @@ const saveDataAndGenerate = async () => {
     
     const docs = props.selection.types.map(t => t.toUpperCase()).join(' and ')
     email.value.subject = `Document Request: ${docs} from SIINGE STUDIO`
-    
+
     // TEXTO BASE EDITABLE (Tu jefa lo puede cambiar todo desde la pantalla)
-    email.value.messageBody = `Hi ${clientData.value.name || 'there'},\n\nPlease review and sign your requested documents via our secure portal below:\n\nIf you have any questions, feel free to reply to this email.`
-    
-    let buttonsHtml = '';
-    
-    // CÓDIGO HTML DE LOS BOTONES (No debe llevar saltos de línea \n en el código interno)
-    if (props.selection.types.includes('nda')) {
-      const ndaLink = `${window.location.origin}/portal/${props.selection.clientId}/nda`;
-      buttonsHtml += `<a href="${ndaLink}" style="background-color: #111827; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: 600; font-family: sans-serif; margin-right: 12px; margin-bottom: 12px;">Review and Sign NDA</a>`;
+    const firstName = (clientData.value.name || '').split(' ')[0]
+    const callDate = clientData.value.call_date ? new Date(clientData.value.call_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) : '[date of call]'
+    const projectName = clientData.value.project_name || '[project name]'
+
+    let docsPhrase = ''
+    if (props.selection.types.includes('sow') && props.selection.types.includes('nda')) {
+      docsPhrase = 'the Scope of Work and Mutual NDA'
+    } else if (props.selection.types.includes('sow')) {
+      docsPhrase = 'the Scope of Work'
+    } else if (props.selection.types.includes('nda')) {
+      docsPhrase = 'the Mutual NDA'
     }
+    const linkWord = props.selection.types.length > 1 ? 'links' : 'link'
+
+    email.value.messageBody = `Hi ${firstName},\n\nIt was great catching up with you on ${callDate} and talking through the details of your project. I put together a structured scope based on everything we discussed so you have a clear picture of how this would move forward.\n\nI've outlined the deliverables, timeline, and how we'll approach development for the ${projectName}.\n\nPlease review and sign ${docsPhrase} by clicking on the ${linkWord} below.\n\nOnce those are complete, I'll send through the invoice and we'll get started!`
+    
+    let linksHtml = '';
 
     if (props.selection.types.includes('sow')) {
       const sowLink = `${window.location.origin}/portal/${props.selection.clientId}/sow`;
-      buttonsHtml += `<a href="${sowLink}" style="background-color: #2563eb; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: 600; font-family: sans-serif; margin-bottom: 12px;">Review and Sign SOW</a>`;
+      linksHtml += `<a href="${sowLink}" style="color: #2563eb; text-decoration: underline;">Review & Sign SOW</a>`;
     }
-    
-    email.value.buttonsHtml = `<div style="margin-top: 10px;">${buttonsHtml}</div>`;
+
+    if (props.selection.types.includes('nda')) {
+      const ndaLink = `${window.location.origin}/portal/${props.selection.clientId}/nda`;
+      if (linksHtml) linksHtml += ' and ';
+      linksHtml += `<a href="${ndaLink}" style="color: #1e293b; text-decoration: underline;">Review & Sign NDA</a>`;
+    }
+
+    email.value.buttonsHtml = linksHtml ? `<p style="font-family:sans-serif;color:#374151;margin:0 0 8px">${linksHtml}</p>` : '';
     
     step.value = 2
   } catch (err) { 

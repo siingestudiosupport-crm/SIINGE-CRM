@@ -463,13 +463,13 @@
             <div>
               <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0 0 10px;">Scope of Work — by Project</p>
 
-              <div v-if="clientProjects.length === 0"
+              <div v-if="!project || !clientProjects.find(p => p.id === project.id)"
                 style="padding: 20px; text-align: center; color: var(--ink-4); font-size: 12px; font-style: italic; border: 1px dashed var(--ink-5); border-radius: 4px;">
                 No SOWs drafted yet. Open a project from Pipeline to draft and dispatch a SOW.
               </div>
 
               <div v-else class="space-y-3">
-                <div v-for="proj in clientProjects" :key="proj.id"
+                <div v-for="proj in clientProjects.filter(p => p.id === project.id)" :key="proj.id"
                   style="background: var(--paper); border: 1px solid var(--bone-edge); border-radius: 4px; padding: 14px 16px;">
 
                   <div class="flex justify-between items-start" style="margin-bottom: 8px;">
@@ -477,10 +477,16 @@
                       <h4 style="font-family: var(--font-display); font-style: italic; font-size: 17px; color: var(--ink); margin: 0 0 2px; letter-spacing: -0.01em;">{{ proj.title }}</h4>
                       <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-4); margin: 0;">{{ proj.pipeline_stage }}</p>
                     </div>
-                    <span v-if="proj.sow_sent_date || project?.client?.sow_sent_date || ['Sent','Signed'].includes(project?.client?.sow_status)" :class="getStatusClass((proj.sow_signed_date || project?.client?.sow_signed_date) ? 'Signed' : 'Sent')">
-                      {{ (proj.sow_signed_date || project?.client?.sow_signed_date) ? 'Signed' : 'Sent' }}
-                    </span>
-                    <span v-else style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-5);">Draft</span>
+                    <div class="flex flex-col items-end gap-2">
+                      <span v-if="proj.sow_sent_date || project?.client?.sow_sent_date || ['Sent','Signed'].includes(project?.client?.sow_status)" :class="getStatusClass((proj.sow_signed_date || project?.client?.sow_signed_date) ? 'Signed' : 'Sent')">
+                        {{ (proj.sow_signed_date || project?.client?.sow_signed_date) ? 'Signed' : 'Sent' }}
+                      </span>
+                      <span v-else style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-5);">Draft</span>
+                      <button v-if="proj.sow_sent_date || project?.client?.sow_sent_date" @click="resetDocument('SOW')"
+                        style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-4); background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0;">
+                        Reset
+                      </button>
+                    </div>
                   </div>
 
                   <div v-if="proj.sow_sent_date || project?.client?.sow_sent_date" class="space-y-1">
@@ -550,11 +556,11 @@
           <div class="space-y-3">
             <div class="grid grid-cols-6 items-center border-b border-gray-100 pb-2">
               <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest col-span-1">To</span>
-              <span class="col-span-5 text-sm font-bold text-gray-700">{{ project?.client?.email }}</span>
+              <input v-model="emailData.to" type="email" class="col-span-5 text-sm font-bold text-gray-800 bg-transparent outline-none focus:text-blue-600 transition-colors" />
             </div>
             <div class="grid grid-cols-6 items-center border-b border-gray-100 pb-2">
-              <span class="text-[10px] font-black text-blue-400 uppercase tracking-widest col-span-1">CC</span>
-              <span class="col-span-5 text-sm font-black text-blue-600 bg-blue-50 w-max px-2 py-0.5 rounded">sierra@siinge.studio</span>
+              <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest col-span-1">CC</span>
+              <input v-model="emailData.cc" type="text" class="col-span-5 text-sm font-bold text-gray-800 bg-transparent outline-none focus:text-blue-600 transition-colors" />
             </div>
             <div class="grid grid-cols-6 items-center border-b border-gray-100 pb-2">
               <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest col-span-1">Subject</span>
@@ -624,7 +630,9 @@ import { ref, computed, watch } from 'vue'
 import { supabase } from '../lib/supabaseClient'
 import { hubSupabase } from '../lib/hubClient'
 import { useConfirmModal } from '../composables/useConfirmModal'
-import { PDFDocument } from 'pdf-lib'
+import { PDFDocument, StandardFonts, rgb, PDFRef } from 'pdf-lib'
+import html2pdf from 'html2pdf.js'
+import { generateSOWHTML } from '../utils/sowTemplate'
 
 const props = defineProps({
   isOpen: Boolean,
@@ -650,7 +658,7 @@ const flashSaved = () => {
   savedFlashTimer = setTimeout(() => { savedFlash.value = false }, 1800)
 }
 const selectedDocs = ref(/** @type {string[]} */ ([]))
-const emailData = ref({ subject: '', messageText: '', buttonsHtml: '' })
+const emailData = ref({ to: '', cc: '', subject: '', messageText: '', buttonsHtml: '' })
 const showSowPreviewModal = ref(false)
 const pdfPreviewUrl = ref('')
 const isGeneratingSowPreview = ref(false)
@@ -918,35 +926,37 @@ const formatPdfDate = (iso) => {
 
 const buildSowPdf = async (forDownload = false, flatten = true) => {
   if (!props.project?.client) throw new Error('Missing client for SOW preview')
-  const url = '/sow.pdf'
-  const existingPdfBytes = await fetch(url).then(res => res.arrayBuffer())
-  const pdfDoc = await PDFDocument.load(existingPdfBytes)
-  const pdfForm = pdfDoc.getForm()
-  const client = props.project.client
 
-  const fillField = (fieldName, value) => {
-    try {
-      const field = pdfForm.getTextField(fieldName)
-      if (field) field.setText(String(value || ''))
-    } catch (e) {
-      console.warn('Field not found in PDF:', fieldName)
-    }
-  }
+  const htmlContent = generateSOWHTML({
+    date_1: formatPdfDate(props.project.client?.sow_sent_date || ''),
+    date_2: formatPdfDate(props.project.client?.sow_signed_date || ''),
+    date_3: formatPdfDate(props.project.client?.sow_sent_date || ''),
+    company_name: props.project.client.company || '',
+    full_address: props.project.client.full_address || '',
+    business_name: props.project.client.business_name || '',
+    client_name: props.project.client.name || '',
+    client_title: props.project.client.title || '',
+    deliverables: localEdits.value.sow_deliverables,
+    timeline: localEdits.value.sow_timeline,
+    fees_payment: localEdits.value.sow_fees_payment,
+    signatureImageBase64: null, // No signature for preview
+  })
 
-  fillField('date_1', formatPdfDate(props.project.client?.sow_sent_date || ''))
-  fillField('date_3', formatPdfDate(props.project.client?.sow_sent_date || ''))
-  fillField('company_name', props.project.client.company || '')
-  fillField('full_address', props.project.client.full_address || '')
-  fillField('business_name', props.project.client.business_name || '')
-  fillField('client_name', props.project.client.name || '')
-  fillField('client_title', props.project.client.title || '')
-  fillField('deliverables', localEdits.value.sow_deliverables)
-  fillField('timeline', localEdits.value.sow_timeline)
-  fillField('fees_payment', localEdits.value.sow_fees_payment)
-  fillField('date_2', formatPdfDate(props.project.client?.sow_signed_date || ''))
+  const element = document.createElement('div')
+  element.innerHTML = htmlContent
 
-  if (flatten) pdfForm.flatten()
-  return pdfDoc.save()
+  const pdfArrayBuffer = await html2pdf()
+    .set({
+      margin: 0,
+      filename: `SOW_${props.project.client.company}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    })
+    .from(element)
+    .outputPdf('arraybuffer')
+
+  return new Uint8Array(pdfArrayBuffer)
 }
 
 const generateSowPdfPreview = async () => {
@@ -1057,6 +1067,12 @@ const resetDocument = async (type) => {
   const key = type.toLowerCase()
   const updates = { [`${key}_status`]: null, [`${key}_sent_date`]: null, [`${key}_opened_at`]: null }
   await supabase.from('clients').update(updates).eq('id', props.project.client_id)
+
+  if (type === 'SOW' && props.project?.id) {
+    const projUpdates = { [`${key}_status`]: null, [`${key}_sent_date`]: null, [`${key}_signed_date`]: null, [`${key}_pdf_path`]: null }
+    await supabase.from('projects').update(projUpdates).eq('id', props.project.id)
+  }
+
   emit('updated')
 }
 
@@ -1064,20 +1080,36 @@ const buildEmailData = () => {
   const baseUrl = window.location.origin
   const clientName = props.project.client.name
   const docsText = selectedDocs.value.join(' and ')
+  emailData.value.to = props.project.client.email
+  emailData.value.cc = 'sierra@siinge.studio'
   emailData.value.subject = `Document Request: ${docsText} from SIINGE STUDIO`
-  emailData.value.messageText = `Hi ${clientName},\n\nPlease review and sign the requested documents for our upcoming collaboration. Click the buttons below to access your secure portal:\n\nBest regards,\nSIINGE STUDIO Team`
+  const firstName = clientName.split(' ')[0]
+  const callDate = props.project.call_date ? new Date(props.project.call_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) : '[date of call]'
+  const projectName = props.project.title || '[project name]'
 
-  let buttonsHtml = `<div style="margin: 10px 0;">`
-  if (selectedDocs.value.includes('NDA')) {
-    const link = `${baseUrl}/portal/${props.project.client_id}/nda`
-    buttonsHtml += `<a href="${link}" style="display:inline-block; margin-bottom:12px; margin-right:12px; padding:15px 28px; background-color:#1e293b; color:#ffffff; text-decoration:none; border-radius:10px; font-weight:bold; font-family:sans-serif; font-size: 14px;">Review & Sign NDA</a>`
+  let docsPhrase = ''
+  if (selectedDocs.value.includes('SOW') && selectedDocs.value.includes('NDA')) {
+    docsPhrase = 'the Scope of Work and Mutual NDA'
+  } else if (selectedDocs.value.includes('SOW')) {
+    docsPhrase = 'the Scope of Work'
+  } else if (selectedDocs.value.includes('NDA')) {
+    docsPhrase = 'the Mutual NDA'
   }
+  const linkWord = selectedDocs.value.length > 1 ? 'links' : 'link'
+
+  emailData.value.messageText = `Hi ${firstName},\n\nIt was great catching up with you on ${callDate} and talking through the details of your project. I put together a structured scope based on everything we discussed so you have a clear picture of how this would move forward.\n\nI've outlined the deliverables, timeline, and how we'll approach development for the ${projectName}.\n\nPlease review and sign ${docsPhrase} by clicking on the ${linkWord} below.\n\nOnce those are complete, I'll send through the invoice and we'll get started!`
+
+  let linksHtml = ''
   if (selectedDocs.value.includes('SOW')) {
-    const link = `${baseUrl}/portal/${props.project.client_id}/sow`
-    buttonsHtml += `<a href="${link}" style="display:inline-block; margin-bottom:12px; padding:15px 28px; background-color:#2563eb; color:#ffffff; text-decoration:none; border-radius:10px; font-weight:bold; font-family:sans-serif; font-size: 14px;">Review & Sign SOW</a>`
+    const sowLink = `${baseUrl}/portal/${props.project.client_id}/sow`
+    linksHtml += `<a href="${sowLink}" style="color: #2563eb; text-decoration: underline;">Review & Sign SOW</a>`
   }
-  buttonsHtml += `</div>`
-  emailData.value.buttonsHtml = buttonsHtml
+  if (selectedDocs.value.includes('NDA')) {
+    const ndaLink = `${baseUrl}/portal/${props.project.client_id}/nda`
+    if (linksHtml) linksHtml += ' and '
+    linksHtml += `<a href="${ndaLink}" style="color: #1e293b; text-decoration: underline;">Review & Sign NDA</a>`
+  }
+  emailData.value.buttonsHtml = linksHtml ? `<p style="font-family:sans-serif;color:#374151;margin:0 0 8px">${linksHtml}</p>` : ''
 }
 
 const saveAndPrepareEmail = async () => {
@@ -1123,8 +1155,8 @@ const dispatchEmail = async () => {
 
     const { error: emailError } = await supabase.functions.invoke('send-email', {
       body: {
-        to: props.project.client.email,
-        cc: 'sierra@siinge.studio',
+        to: emailData.value.to,
+        cc: emailData.value.cc,
         subject: emailData.value.subject,
         html: emailData.value.messageText.split('\n').map(l => l ? `<p style="font-family:sans-serif;color:#374151;margin:0 0 8px">${l}</p>` : '').join('') + emailData.value.buttonsHtml,
         client_id: props.project.client_id,

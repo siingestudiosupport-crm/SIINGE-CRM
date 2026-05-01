@@ -116,7 +116,9 @@ import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { supabase } from '../lib/supabaseClient'
 import { useConfirmModal } from '../composables/useConfirmModal'
-import { PDFDocument } from 'pdf-lib'
+import { PDFDocument, StandardFonts, rgb, PDFRef } from 'pdf-lib'
+import html2pdf from 'html2pdf.js'
+import { generateSOWHTML } from '../utils/sowTemplate'
 
 const route = useRoute()
 const { alert: showAlert } = useConfirmModal()
@@ -182,57 +184,72 @@ const fetchDocument = async () => {
 }
 
 const buildPDF = async (forDownload = false, flattenPdf = false) => {
-  const url = isNDA.value ? '/mutual_nda.pdf' : '/sow.pdf'
+  const p = client.value
+
+  // === SOW: Generate from HTML template ===
+  if (isSOW.value) {
+    const htmlContent = generateSOWHTML({
+      date_1: formatDate(p.sow_sent_date),
+      date_2: formatDate(p.sow_signed_date),
+      date_3: formatDate(p.sow_sent_date),
+      company_name: form.value.company_name,
+      full_address: form.value.full_address,
+      business_name: form.value.business_name,
+      client_name: form.value.client_name,
+      client_title: form.value.client_title,
+      deliverables: p.sow_deliverables,
+      timeline: p.sow_timeline,
+      fees_payment: p.sow_fees_payment,
+      signatureImageBase64: forDownload && p.sow_signature ? p.sow_signature.split(',')[1] : null,
+    })
+
+    const element = document.createElement('div')
+    element.innerHTML = htmlContent
+
+    const pdfArrayBuffer = await html2pdf()
+      .set({
+        margin: 0,
+        filename: `SOW_${form.value.company_name}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      })
+      .from(element)
+      .outputPdf('arraybuffer')
+
+    return new Uint8Array(pdfArrayBuffer)
+  }
+
+  // === NDA: Use PDF template (existing logic) ===
+  const url = '/mutual_nda.pdf'
   const existingPdfBytes = await fetch(url).then(res => res.arrayBuffer())
   const pdfDoc = await PDFDocument.load(existingPdfBytes)
   const pdfForm = pdfDoc.getForm()
-  const p = client.value
 
-  const fillExactField = (fieldName, text) => { 
-    try { 
-      const field = pdfForm.getTextField(fieldName);
-      if(field) field.setText(String(text || ''));
-    } catch (e) { console.warn('Field not found in PDF:', fieldName) } 
+  const fillField = (fieldName, text) => {
+    try {
+      const field = pdfForm.getTextField(fieldName)
+      if (field) field.setText(String(text || ''))
+    } catch (e) { console.warn('Field not found in PDF:', fieldName) }
   }
 
-  if (isSOW.value) {
-    fillExactField('date_1', formatDate(p.sow_sent_date))
-    fillExactField('deliverables', p.sow_deliverables)
-    fillExactField('timeline', p.sow_timeline)
-    fillExactField('fees_payment', p.sow_fees_payment)
-    fillExactField('date_3', formatDate(p.sow_sent_date))
-    fillExactField('company_name', form.value.company_name)
-    fillExactField('full_address', form.value.full_address)
-    fillExactField('business_name', form.value.business_name)
-    fillExactField('client_name', form.value.client_name)
-    fillExactField('client_title', form.value.client_title)
-    fillExactField('date_2', formatDate(p.sow_signed_date))
+  fillField('date_1', formatDate(p.nda_sent_date))
+  fillField('company_name', form.value.company_name)
+  fillField('client_name', form.value.client_name)
+  fillField('client_title', form.value.client_title)
+  fillField('date_2', formatDate(p.nda_signed_date))
+  fillField('date_3', formatDate(p.nda_sent_date))
 
-    if (forDownload && p.sow_signature) {
-      const png = await pdfDoc.embedPng(p.sow_signature)
-      try {
-        const rect = pdfForm.getField('signature_sow').acroField.getWidgets()[0].getRectangle()
-        pdfDoc.getPages()[pdfDoc.getPages().length - 1].drawImage(png, { x: rect.x, y: rect.y, width: rect.width, height: rect.height })
-      } catch (err) { console.warn('Signature field not found') }
-    }
-  } else {
-    fillExactField('date_1', formatDate(p.nda_sent_date))
-    fillExactField('company_name', form.value.company_name)
-    fillExactField('client_name', form.value.client_name)
-    fillExactField('client_title', form.value.client_title)
-    fillExactField('date_2', formatDate(p.nda_signed_date))
-    fillExactField('date_3', formatDate(p.nda_sent_date))
-    
-    if (forDownload && p.nda_signature) {
+  if (forDownload && p.nda_signature) {
+    try {
       const png = await pdfDoc.embedPng(p.nda_signature)
-      try {
-        const rect = pdfForm.getField('signature_nda').acroField.getWidgets()[0].getRectangle()
-        pdfDoc.getPages()[pdfDoc.getPages().length - 1].drawImage(png, { x: rect.x, y: rect.y, width: rect.width, height: rect.height })
-      } catch (err) {}
-    }
+      const rect = pdfForm.getField('signature_nda').acroField.getWidgets()[0].getRectangle()
+      pdfDoc.getPages()[pdfDoc.getPages().length - 1].drawImage(png, { x: rect.x, y: rect.y, width: rect.width, height: rect.height })
+    } catch (err) { console.warn('Signature embedding failed') }
   }
 
   if (flattenPdf || forDownload) pdfForm.flatten()
+
   return await pdfDoc.save()
 }
 
