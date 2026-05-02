@@ -122,8 +122,20 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Verify webhook signature if secret is configured
+    const webhookSecret = Deno.env.get('SEND_EMAIL_SECRET')
+    if (webhookSecret) {
+      const signature = req.headers.get('x-webhook-signature')
+      if (!signature || signature !== webhookSecret) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+    }
+
     // Recibimos client_id y doc_type desde el Frontend para el tracking
-    const { to, subject, html, client_id, doc_type, queue_item_id } = await req.json()
+    const { to, subject, html, client_id, doc_type, queue_item_id, attachments } = await req.json()
 
     // Unimos el mensaje original del CRM con la firma HTML
     const finalHtml = `
@@ -147,6 +159,8 @@ serve(async (req: Request) => {
         ...(doc_type !== 'followup' ? { cc: ['sierra@siinge.studio'] } : {}),
         subject: subject,
         html: finalHtml,
+        // Include attachments if provided
+        ...(attachments && attachments.length > 0 ? { attachments } : {}),
         // ETIQUETAS PARA QUE EL WEBHOOK SEPA QUÉ DOCUMENTO SE ABRIÓ
         tags: [
           { name: 'client_id',     value: client_id     || 'unknown' },
@@ -159,11 +173,14 @@ serve(async (req: Request) => {
     const data = await res.json()
 
     if (!res.ok) {
+      console.error('Resend error:', data, 'Attachments sent:', !!attachments)
       return new Response(JSON.stringify({ error: data?.message || data?.name || 'Resend rejected the request', resend: data }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: res.status,
       })
     }
+
+    console.log('Email sent successfully with attachments:', !!attachments)
 
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

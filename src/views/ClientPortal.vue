@@ -1,14 +1,22 @@
 ﻿<template>
   <div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
-    
+
     <div v-if="loading" class="max-w-3xl mx-auto text-center py-20">
       <p class="text-gray-500 font-medium animate-pulse">Loading secure document...</p>
+    </div>
+    <div v-else-if="tokenError" class="max-w-3xl mx-auto text-center py-20 bg-white shadow rounded-xl border-l-4 border-red-500">
+      <div class="p-6">
+        <svg class="w-16 h-16 mx-auto text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4v2m0 4v2M12 2a10 10 0 110 20 10 10 0 010-20z"/></svg>
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">Access Denied</h2>
+        <p class="text-gray-600 mb-6">{{ tokenError }}</p>
+        <p class="text-sm text-gray-500">If you believe this is an error, please contact the document sender.</p>
+      </div>
     </div>
     <div v-else-if="!client" class="max-w-3xl mx-auto text-center py-20 bg-white shadow rounded-xl">
       <h2 class="text-2xl font-bold text-gray-800">Document Not Found</h2>
     </div>
 
-    <div v-else class="max-w-4xl mx-auto bg-white shadow-xl rounded-xl overflow-hidden border border-gray-200">
+    <div v-else-if="tokenValid" class="max-w-4xl mx-auto bg-white shadow-xl rounded-xl overflow-hidden border border-gray-200">
       
       <div class="bg-slate-900 px-8 py-6 text-white flex justify-between items-center">
         <div>
@@ -88,7 +96,7 @@
               </div>
             </div>
 
-            <button @click="submitDocument" :disabled="!isValid || isSubmitting" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg shadow-md disabled:opacity-50 transition-all flex justify-center items-center gap-3">
+            <button @click.prevent="submitDocument" :disabled="!isValid || isSubmitting" class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-4 rounded-xl font-bold text-lg shadow-md disabled:shadow-none disabled:cursor-not-allowed transition-all flex justify-center items-center gap-3">
               <span v-if="isSubmitting" class="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></span>
               {{ isSubmitting ? 'Securing & Saving to Vault...' : 'I Agree and Sign Document' }}
             </button>
@@ -115,6 +123,10 @@ import { useConfirmModal } from '../composables/useConfirmModal'
 import { PDFDocument, StandardFonts, rgb, PDFRef } from 'pdf-lib'
 import html2pdf from 'html2pdf.js'
 import { generateSOWHTML } from '../utils/sowTemplate'
+import { checkRateLimit } from '../utils/portalRateLimit'
+import { checkTokenValid, markTokenAsUsed } from '../utils/portalTokens'
+import { checkBackendRateLimit, logPortalAccess, isKnownScraper } from '../utils/backendRateLimit'
+import { sendSignedDocumentEmail } from '../utils/sendSignedDocument'
 
 const route = useRoute()
 const { alert: showAlert } = useConfirmModal()
@@ -124,6 +136,8 @@ const isGeneratingPDF = ref(false)
 const client = ref(null)
 const sowProject = ref(null)
 const pdfPreviewUrl = ref('')
+const tokenValid = ref(false)
+const tokenError = ref(null)
 
 const form = ref({ company_name: '', full_address: '', business_name: '', client_name: '', client_title: '' })
 const sigCanvas = ref(null); const ctx = ref(null); const isDrawing = ref(false); const hasDrawn = ref(false)
@@ -148,6 +162,64 @@ const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDat
 const fetchDocument = async () => {
   try {
     loading.value = true
+
+    // Detect scrapers
+    const userAgent = navigator.userAgent
+    if (isKnownScraper(userAgent)) {
+      tokenError.value = 'Automated access not permitted.'
+      await logPortalAccess(route.params.clientId, route.params.documentType, 403)
+      loading.value = false
+      return
+    }
+
+    // Validate portal token
+    const token = route.query.token
+    if (!token) {
+      tokenError.value = 'Missing access token. This link may have expired or is invalid.'
+      loading.value = false
+      return
+    }
+
+    const validation = await checkTokenValid(
+      token,
+      route.params.clientId,
+      route.params.documentType,
+      route.params.projectId
+    )
+
+    if (!validation.valid) {
+      tokenError.value = validation.error || 'Invalid or expired access token'
+      await logPortalAccess(route.params.clientId, route.params.documentType, 401)
+      loading.value = false
+      return
+    }
+
+    // Mark token as used on first load
+    await markTokenAsUsed(token)
+
+    tokenValid.value = true
+
+    // Client-side rate limiting
+    const rateLimitCheck = checkRateLimit(route.params.documentType)
+    if (!rateLimitCheck.allowed) {
+      tokenError.value = rateLimitCheck.reason || 'Too many requests'
+      await logPortalAccess(route.params.clientId, route.params.documentType, 429)
+      loading.value = false
+      return
+    }
+
+    // Backend rate limiting
+    const backendLimit = await checkBackendRateLimit(route.params.clientId, route.params.documentType)
+    if (!backendLimit.allowed) {
+      tokenError.value = backendLimit.message || 'Rate limit exceeded'
+      await logPortalAccess(route.params.clientId, route.params.documentType, 429)
+      loading.value = false
+      return
+    }
+
+    // Log successful access
+    await logPortalAccess(route.params.clientId, route.params.documentType, 200)
+
     const { data } = await supabase.from('clients').select('*').eq('id', route.params.clientId).single()
     client.value = data
 
@@ -316,6 +388,7 @@ watch(sigCanvas, (canvas) => {
 
 
 const submitDocument = async () => {
+  if (isSubmitting.value) return
   try {
     isSubmitting.value = true
     console.log("Iniciando proceso de firma...");
@@ -389,6 +462,15 @@ const submitDocument = async () => {
         sow_signature: sig64,
         sow_pdf_path: filePath
       }).eq('id', sowProject.value.id)
+
+      // Update local state to reflect signed status
+      sowProject.value.sow_status = 'Signed'
+      sowProject.value.sow_signature = sig64
+      sowProject.value.sow_signed_date = d
+    } else if (isNDA.value) {
+      // Update local state for NDA
+      client.value.nda_status = 'Signed'
+      client.value.nda_signature = sig64
     }
 
     await supabase.from('activity_logs').insert({
@@ -400,13 +482,29 @@ const submitDocument = async () => {
       notes: `Signed by ${form.value.client_name} (${form.value.client_title})`
     })
 
+    // Send signed document email to client
+    if (client.value.email) {
+      const emailResult = await sendSignedDocumentEmail(
+        client.value.email,
+        form.value.client_name,
+        route.params.documentType,
+        filePath,
+        signedProjectTitle
+      )
+      if (!emailResult.success) {
+        console.error('Email send failed:', emailResult.error)
+      } else {
+        console.log('Signed document email sent successfully')
+      }
+    }
+
     console.log("Todo completado con éxito.");
-    await fetchDocument() 
-  } catch (error) { 
+    await generateLivePDFPreview()
+  } catch (error) {
     console.error("FALLO GENERAL:", error);
     await showAlert('System error: ' + error.message, 'Critical Error')
-  } finally { 
-    isSubmitting.value = false 
+  } finally {
+    isSubmitting.value = false
   }
 }
 

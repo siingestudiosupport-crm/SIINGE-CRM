@@ -28,7 +28,10 @@ const routes = [
     path: '/portal/:clientId/:documentType/:projectId?',
     name: 'ClientPortal',
     component: ClientPortal,
-    meta: { requiresAuth: false }
+    meta: {
+      requiresAuth: false,
+      isPublicSignature: true
+    }
   }
 ]
 

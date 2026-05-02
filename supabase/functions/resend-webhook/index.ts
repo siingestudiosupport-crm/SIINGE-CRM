@@ -4,6 +4,18 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 serve(async (req) => {
   try {
+    // Verify webhook signature
+    const webhookSecret = Deno.env.get('RESEND_WEBHOOK_SECRET')
+    if (webhookSecret) {
+      const signature = req.headers.get('x-webhook-signature')
+      if (!signature || signature !== webhookSecret) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      }
+    }
+
     const payload = await req.json()
 
     // Only handle email.opened events

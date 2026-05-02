@@ -694,6 +694,7 @@ import { useConfirmModal } from '../composables/useConfirmModal'
 import { PDFDocument, StandardFonts, rgb, PDFRef } from 'pdf-lib'
 import html2pdf from 'html2pdf.js'
 import { generateSOWHTML } from '../utils/sowTemplate'
+import { createPortalToken, generatePortalLink } from '../utils/portalTokens'
 
 const props = defineProps({
   isOpen: Boolean,
@@ -1255,12 +1256,38 @@ const dispatchEmail = async () => {
     isSendingEmail.value = true
     const sentDate = new Date().toISOString()
 
+    // Generate tokens for each document
+    const portalLinks = {}
+    for (const doc of selectedDocs.value) {
+      const docType = doc.toLowerCase()
+      const projectId = docType === 'sow' ? props.project?.id : null
+      const { token, error: tokenError } = await createPortalToken(
+        props.project.client_id,
+        docType,
+        projectId,
+        48 // 48 hour expiration
+      )
+      if (tokenError) throw new Error(`Failed to create ${doc} token: ${tokenError}`)
+      portalLinks[docType] = generatePortalLink(props.project.client_id, docType, projectId, token)
+    }
+
+    // Build email HTML with secure links
+    let emailHtml = emailData.value.messageText.split('\n').map(l => l ? `<p style="font-family:sans-serif;color:#374151;margin:0 0 8px">${l}</p>` : '').join('')
+
+    // Replace placeholder links with secure token links (as inline text)
+    if (selectedDocs.value.includes('SOW') && portalLinks.sow) {
+      emailHtml += `<p style="font-family:sans-serif;margin:16px 0">Please review and sign the Scope of Work by clicking <a href="${portalLinks.sow}" style="color:#2563eb;text-decoration:underline">here</a>.</p>`
+    }
+    if (selectedDocs.value.includes('NDA') && portalLinks.nda) {
+      emailHtml += `<p style="font-family:sans-serif;margin:16px 0">Please review and sign the NDA by clicking <a href="${portalLinks.nda}" style="color:#2563eb;text-decoration:underline">here</a>.</p>`
+    }
+
     const { error: emailError } = await supabase.functions.invoke('send-email', {
       body: {
         to: emailData.value.to,
         cc: emailData.value.cc,
         subject: emailData.value.subject,
-        html: emailData.value.messageText.split('\n').map(l => l ? `<p style="font-family:sans-serif;color:#374151;margin:0 0 8px">${l}</p>` : '').join('') + emailData.value.buttonsHtml,
+        html: emailHtml,
         client_id: props.project.client_id,
         doc_type: selectedDocs.value.join('_')
       }
