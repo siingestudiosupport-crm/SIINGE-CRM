@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
     
     <div v-if="loading" class="max-w-3xl mx-auto text-center py-20">
@@ -56,10 +56,6 @@
               </div>
               
               <template v-if="isSOW">
-                <div>
-                  <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Business Name (DBA)</label>
-                  <input v-model="form.business_name" type="text" class="w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
                 <div class="md:col-span-2">
                   <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Full Address</label>
                   <input v-model="form.full_address" type="text" class="w-full border border-gray-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500" />
@@ -101,9 +97,9 @@
           <div v-else class="bg-green-50 p-8 rounded-xl border border-green-200 flex flex-col md:flex-row justify-between items-center">
             <div>
               <p class="text-green-800 font-bold text-lg">Document Signed & Secured</p>
-              <p class="text-green-600 text-sm mt-1">Executed by <span class="font-bold">{{ isNDA ? client.nda_client_name : client.sow_client_name }}</span></p>
+              <p class="text-green-600 text-sm mt-1">Executed by <span class="font-bold">{{ isNDA ? client.nda_client_name : sowProject?.sow_client_name }}</span></p>
             </div>
-            <img v-if="isNDA ? client.nda_signature : client.sow_signature" :src="isNDA ? client.nda_signature : client.sow_signature" class="h-20 mix-blend-multiply mt-4 md:mt-0" />
+            <img v-if="isNDA ? client.nda_signature : sowProject?.sow_signature" :src="isNDA ? client.nda_signature : sowProject.sow_signature" class="h-20 mix-blend-multiply mt-4 md:mt-0" />
           </div>
         </div>
       </div>
@@ -126,6 +122,7 @@ const loading = ref(true)
 const isSubmitting = ref(false)
 const isGeneratingPDF = ref(false)
 const client = ref(null)
+const sowProject = ref(null)
 const pdfPreviewUrl = ref('')
 
 const form = ref({ company_name: '', full_address: '', business_name: '', client_name: '', client_title: '' })
@@ -136,12 +133,13 @@ const isSOW = computed(() => route.params.documentType === 'sow')
 
 const isSigned = computed(() => {
   if (!client.value) return false
-  return isNDA.value ? client.value.nda_status === 'Signed' : client.value.sow_status === 'Signed'
+  if (isNDA.value) return client.value.nda_status === 'Signed'
+  return sowProject.value?.sow_status === 'Signed'
 })
 
 const isValid = computed(() => {
   if (!hasDrawn.value || !form.value.client_name || !form.value.client_title || !form.value.company_name) return false
-  if (isSOW.value && (!form.value.full_address || !form.value.business_name)) return false
+  if (isSOW.value && !form.value.full_address) return false
   return true
 })
 
@@ -150,16 +148,23 @@ const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDat
 const fetchDocument = async () => {
   try {
     loading.value = true
-    const { data, error } = await supabase.from('clients').select('*').eq('id', route.params.clientId).single()
+    const { data } = await supabase.from('clients').select('*').eq('id', route.params.clientId).single()
     client.value = data
-    
+
+    // For SOW: fetch the specific project so each project has its own SOW
+    if (isSOW.value && route.params.projectId) {
+      const { data: projData } = await supabase.from('projects').select('*').eq('id', route.params.projectId).single()
+      sowProject.value = projData
+    }
+
     if (data) {
       if (isSigned.value) {
+        const src = isNDA.value ? data : (sowProject.value || data)
         form.value.company_name = data.company || ''
-        form.value.client_name = isNDA.value ? (data.nda_client_name || '') : (data.sow_client_name || '')
-        form.value.client_title = isNDA.value ? (data.nda_client_title || '') : (data.sow_client_title || '')
-        form.value.full_address = data.full_address || ''
-        form.value.business_name = data.business_name || ''
+        form.value.client_name = isNDA.value ? (data.nda_client_name || '') : (src.sow_client_name || '')
+        form.value.client_title = isNDA.value ? (data.nda_client_title || '') : (src.sow_client_title || '')
+        form.value.full_address = src.full_address || data.full_address || ''
+        form.value.business_name = src.business_name || data.business_name || ''
       } else {
         form.value.company_name = ''
         form.value.client_name = ''
@@ -167,19 +172,22 @@ const fetchDocument = async () => {
         form.value.full_address = ''
         form.value.business_name = ''
       }
-      
-      // Tracking: Fase 1 (Apertura)
-      const openedField = isNDA.value ? 'nda_opened_at' : 'sow_opened_at'
-      if (!isSigned.value && !data[openedField]) {
-        await supabase.from('clients').update({ [openedField]: new Date().toISOString() }).eq('id', data.id)
+
+      // Tracking: opened_at
+      if (!isSigned.value) {
+        if (isNDA.value && !data.nda_opened_at) {
+          await supabase.from('clients').update({ nda_opened_at: new Date().toISOString() }).eq('id', data.id)
+        } else if (isSOW.value && sowProject.value && !sowProject.value.sow_opened_at) {
+          await supabase.from('projects').update({ sow_opened_at: new Date().toISOString() }).eq('id', sowProject.value.id)
+        }
       }
     }
-    
+
     await generateLivePDFPreview()
-  } catch (error) { 
-    console.error(error) 
-  } finally { 
-    loading.value = false 
+  } catch (error) {
+    console.error(error)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -188,19 +196,31 @@ const buildPDF = async (forDownload = false, flattenPdf = false) => {
 
   // === SOW: Generate from HTML template ===
   if (isSOW.value) {
+    const proj = sowProject.value || p
+
+    const studioSignatureBase64 = await fetch('/signature.png')
+      .then(r => r.blob())
+      .then(b => new Promise(resolve => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result.split(',')[1])
+        reader.readAsDataURL(b)
+      }))
+      .catch(() => null)
+
     const htmlContent = generateSOWHTML({
-      date_1: formatDate(p.sow_sent_date),
-      date_2: formatDate(p.sow_signed_date),
-      date_3: formatDate(p.sow_sent_date),
+      date_1: formatDate(proj.sow_sent_date),
+      date_2: formatDate(proj.sow_signed_date),
+      date_3: formatDate(proj.sow_sent_date),
       company_name: form.value.company_name,
       full_address: form.value.full_address,
-      business_name: form.value.business_name,
+      business_name: form.value.company_name,
       client_name: form.value.client_name,
       client_title: form.value.client_title,
-      deliverables: p.sow_deliverables,
-      timeline: p.sow_timeline,
-      fees_payment: p.sow_fees_payment,
-      signatureImageBase64: forDownload && p.sow_signature ? p.sow_signature.split(',')[1] : null,
+      deliverables: proj.sow_deliverables,
+      timeline: proj.sow_timeline,
+      fees_payment: proj.sow_fees_payment,
+      signatureImageBase64: forDownload && proj.sow_signature ? proj.sow_signature.split(',')[1] : null,
+      studioSignatureBase64,
     })
 
     const element = document.createElement('div')
@@ -211,7 +231,7 @@ const buildPDF = async (forDownload = false, flattenPdf = false) => {
         margin: 0,
         filename: `SOW_${form.value.company_name}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
+        html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
       })
       .from(element)
@@ -304,7 +324,7 @@ const submitDocument = async () => {
     const d = new Date().toISOString()
     
     if (isNDA.value) client.value.nda_signature = sig64
-    else client.value.sow_signature = sig64
+    else if (sowProject.value) sowProject.value.sow_signature = sig64
 
     console.log("Generando PDF con pdf-lib...");
     const pdfBytes = await buildPDF(true)
@@ -342,20 +362,12 @@ const submitDocument = async () => {
         nda_pdf_path: filePath 
       }
     } else {
-      updates = { 
-        ...updates, 
-        sow_status: 'Signed', 
-        full_address: form.value.full_address, 
-        business_name: form.value.business_name, 
-        sow_client_name: form.value.client_name, 
-        sow_client_title: form.value.client_title, 
-        sow_signed_date: d, 
-        sow_signature: sig64,
-        sow_pdf_path: filePath 
+      updates = {
+        ...updates,
+        full_address: form.value.full_address,
+        business_name: form.value.company_name,
       }
     }
-
-    console.log("Actualizando base de datos con los campos:", updates);
 
     const { error: dbError } = await supabase.from('clients').update(updates).eq('id', client.value.id)
     if (dbError) {
@@ -363,26 +375,20 @@ const submitDocument = async () => {
       throw dbError;
     }
 
-    // For SOW: also stamp the project that was most recently sent a SOW
+    // SOW: write all signing data to the project
     let signedProjectId = null
     let signedProjectTitle = null
-    if (!isNDA.value) {
-      const { data: sowProject } = await supabase
-        .from('projects')
-        .select('id, title')
-        .eq('client_id', client.value.id)
-        .not('sow_sent_date', 'is', null)
-        .is('sow_signed_date', null)
-        .order('sow_sent_date', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      if (sowProject) {
-        signedProjectId = sowProject.id
-        signedProjectTitle = sowProject.title
-        await supabase.from('projects')
-          .update({ sow_signed_date: d, sow_pdf_path: filePath })
-          .eq('id', sowProject.id)
-      }
+    if (!isNDA.value && sowProject.value) {
+      signedProjectId = sowProject.value.id
+      signedProjectTitle = sowProject.value.title
+      await supabase.from('projects').update({
+        sow_status: 'Signed',
+        sow_client_name: form.value.client_name,
+        sow_client_title: form.value.client_title,
+        sow_signed_date: d,
+        sow_signature: sig64,
+        sow_pdf_path: filePath
+      }).eq('id', sowProject.value.id)
     }
 
     await supabase.from('activity_logs').insert({

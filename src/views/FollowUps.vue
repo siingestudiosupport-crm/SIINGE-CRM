@@ -145,7 +145,7 @@ import { useConfirmModal } from '../composables/useConfirmModal'
 const { confirm: showConfirm, alert: showAlert } = useConfirmModal()
 
 // ── Trigger metadata ──────────────────────────────────────────────────────────
-const TRIGGER_ORDER = ['proposal_3d', 'proposal_7d', 'proposal_weekly', 'call_completed_24h', 'cold_30d']
+const TRIGGER_ORDER = ['proposal_3d', 'proposal_7d', 'proposal_weekly', 'call_completed_24h', 'cold_30d', 'review_request']
 
 const TRIGGER_META = {
   proposal_3d:        { label: 'Proposal Follow-up',  timing: '3-day follow-up',         color: 'var(--caution)' },
@@ -153,6 +153,7 @@ const TRIGGER_META = {
   proposal_weekly:    { label: 'Weekly Follow-up',    timing: 'Weekly check-in',          color: 'var(--ember)'   },
   call_completed_24h: { label: 'Post-Call Nudge',     timing: 'Send proposal within 24h', color: 'var(--info)'    },
   cold_30d:           { label: 'Cold Re-engagement',  timing: '30-day re-engage',         color: 'var(--ink-3)'   },
+  review_request:     { label: 'Request Review',      timing: 'After project complete',   color: 'var(--positive)' },
 }
 
 const CLOSED_STAGES = ['Contracts Signed', 'Invoice Paid', 'Project Complete', 'Churn']

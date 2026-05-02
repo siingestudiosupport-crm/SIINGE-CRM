@@ -147,6 +147,14 @@
                   <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Primary Issue / Need</label>
                   <textarea v-model="form.primary_issue" rows="2" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none; resize: vertical;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'"></textarea>
                 </div>
+                <div class="col-span-2 md:col-span-1">
+                  <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Meeting Date & Time</label>
+                  <input v-model="form.scheduled_date" type="datetime-local" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" />
+                </div>
+                <div class="col-span-2 md:col-span-1">
+                  <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Meeting Link (Optional)</label>
+                  <input v-model="form.meeting_link" type="url" placeholder="https://..." style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" />
+                </div>
               </div>
             </div>
           </div>
@@ -162,15 +170,15 @@
 
     <!-- Add Project Modal -->
     <div v-if="showAddProjectModal" class="fixed inset-0 flex items-center justify-center p-4 z-[70]" style="background: rgba(14,14,12,0.45);">
-      <div class="w-full max-w-lg overflow-hidden" style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px;" :class="'animate-slide-up'">
-        <div class="flex justify-between items-center" style="padding: 16px 24px; border-bottom: 1px solid var(--bone-edge); background: var(--ink);">
+      <div class="w-full max-w-lg flex flex-col" style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; max-height: 90vh;" :class="'animate-slide-up'">
+        <div class="flex justify-between items-center flex-shrink-0" style="padding: 16px 24px; border-bottom: 1px solid var(--bone-edge); background: var(--ink);">
           <div>
             <h3 style="font-family: var(--font-display); font-style: italic; font-size: 20px; font-weight: 400; color: var(--paper); margin: 0 0 2px;">Add Project</h3>
             <p style="font-size: 11px; color: rgba(250,247,242,0.5); margin: 0;">for {{ targetClient?.name }}</p>
           </div>
           <button @click="showAddProjectModal = false" style="color: rgba(250,247,242,0.6); background: none; border: none; font-size: 24px; cursor: pointer; line-height: 1; padding: 0;">&times;</button>
         </div>
-        <form @submit.prevent="saveProject" class="p-6 space-y-4">
+        <form @submit.prevent="saveProject" class="p-6 space-y-4 overflow-y-auto">
           <div>
             <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Project Name *</label>
             <input v-model="projectForm.title" type="text" required placeholder="e.g. Brand Identity Redesign" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" />
@@ -192,10 +200,6 @@
             </div>
           </div>
           <div>
-            <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Milestones</label>
-            <textarea v-model="projectForm.milestones" rows="3" placeholder="• Phase 1: Discovery&#10;• Phase 2: Design&#10;• Phase 3: Delivery" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none; resize: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'"></textarea>
-          </div>
-          <div>
             <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Due Date</label>
             <input v-model="projectForm.due_date" type="date" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" />
           </div>
@@ -208,10 +212,63 @@
               </option>
             </select>
           </div>
-          <label class="flex items-center gap-3" style="padding: 10px 12px; border: 1px solid var(--ink-5); border-radius: 2px; cursor: pointer; background: var(--paper);">
-            <input type="checkbox" v-model="projectForm.in_menu_hub" style="width: 14px; height: 14px; accent-color: var(--ink);" />
-            <span style="font-size: 13px; color: var(--ink-2);">Added to Menu Hub</span>
-          </label>
+          <button
+            type="button"
+            @click="projectForm.add_to_hub = !projectForm.add_to_hub"
+            :style="projectForm.add_to_hub
+              ? 'width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 2px; border: 1px solid #B8C4A0; background: var(--positive-soft); cursor: pointer; font-family: var(--font-sans);'
+              : 'width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 2px; border: 1px solid var(--ink-5); background: var(--paper); cursor: pointer; font-family: var(--font-sans);'"
+          >
+            <svg v-if="projectForm.add_to_hub" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--positive)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <svg v-else width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+            <span :style="projectForm.add_to_hub ? 'font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--positive);' : 'font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-3);'">
+              {{ projectForm.add_to_hub ? 'Added to Manu Hub' : 'Add to Manu Hub' }}
+            </span>
+          </button>
+
+          <!-- Deliverables -->
+          <div style="border: 1px solid var(--ink-5); border-radius: 2px; background: var(--paper); padding: 12px;">
+            <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 10px;">Deliverables</label>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+
+              <div v-for="item in [
+                { label: 'Trend / Market Analysis', model: 'deliverable_trend_analysis', dueField: 'deliverable_trend_analysis_due' },
+                { label: 'Apparel Design', model: 'deliverable_design', dueField: 'deliverable_design_due' },
+                { label: 'Branding / Packaging Design', model: 'deliverable_branding', dueField: 'deliverable_branding_due' },
+                { label: 'Tech Pack', model: 'deliverable_tech_pack', dueField: 'deliverable_tech_pack_due' },
+                { label: 'Product Development Mgmt', model: 'deliverable_product_dev', productDev: true },
+                { label: 'Product Analysis X Refinement', model: 'deliverable_product_analysis', dueField: 'deliverable_product_analysis_due' },
+                { label: 'In House Patternmaking', model: 'deliverable_in_house_patternmaking', dueField: 'deliverable_in_house_patternmaking_due' },
+                { label: 'In House Proto', model: 'deliverable_in_house_proto', dueField: 'deliverable_in_house_proto_due' },
+                { label: 'In House Manufacturing', model: 'deliverable_in_house_manufacturing', dueField: 'deliverable_in_house_manufacturing_due' },
+              ]" :key="item.model" style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 2px; padding: 10px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                  <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" v-model="projectForm[item.model]" style="width: 14px; height: 14px; accent-color: var(--ink); flex-shrink: 0;" />
+                    <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-2);">{{ item.label }}</span>
+                  </label>
+                  <div v-if="item.dueField && projectForm[item.model]" style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 150px;">
+                    <span style="font-size: 9px; color: var(--ink-4); text-transform: uppercase; letter-spacing: 0.08em;">Due Date</span>
+                    <input type="date" v-model="projectForm[item.dueField]" style="width: 100%; padding: 6px 8px; border: 1px solid var(--ink-5); border-radius: 2px; background: var(--paper); color: var(--ink); font-size: 12px;" />
+                  </div>
+                </div>
+                <div v-if="item.productDev && projectForm.deliverable_product_dev" style="margin-top: 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+                  <div v-for="sub in [
+                    { label: 'Manu Quotes Due', model: 'deliverable_manu_quotes_due' },
+                    { label: 'Initial Sample Due', model: 'deliverable_initial_sample_due' },
+                    { label: 'Approved Sample Due', model: 'deliverable_approved_sample_due' },
+                    { label: 'Size Range Approval Due', model: 'deliverable_size_range_due' },
+                    { label: 'Bulk Due', model: 'deliverable_bulk_due' },
+                  ]" :key="sub.model" style="display: flex; flex-direction: column; gap: 4px;">
+                    <span style="font-size: 9px; color: var(--ink-4); text-transform: uppercase; letter-spacing: 0.08em;">{{ sub.label }}</span>
+                    <input type="date" v-model="projectForm[sub.model]" style="width: 100%; padding: 6px 8px; border: 1px solid var(--ink-5); border-radius: 2px; background: var(--paper); color: var(--ink); font-size: 12px;" />
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
           <div class="flex justify-end gap-3" style="padding-top: 12px; border-top: 1px solid var(--ink-5);">
             <button type="button" @click="showAddProjectModal = false" style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 16px; background: transparent; color: var(--ink); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer;">Cancel</button>
             <button type="submit" :disabled="isSavingProject" style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 20px; background: var(--ink); color: var(--paper); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer;" :style="isSavingProject ? 'opacity: 0.5;' : ''">
@@ -254,13 +311,13 @@ const selectedProject = ref(null)
 const showAddProjectModal = ref(false)
 const isSavingProject = ref(false)
 const targetClient = ref(null)
-const projectForm = ref({ title: '', amount_paid: null, amount_owed: null, milestones: '', due_date: '', in_menu_hub: false, hub_project_id: null })
+const projectForm = ref({ title: '', amount_paid: null, amount_owed: null, milestones: '', due_date: '', add_to_hub: false, hub_project_id: null, deliverable_trend_analysis: false, deliverable_trend_analysis_due: '', deliverable_design: false, deliverable_design_due: '', deliverable_branding: false, deliverable_branding_due: '', deliverable_tech_pack: false, deliverable_tech_pack_due: '', deliverable_product_dev: false, deliverable_manu_quotes_due: '', deliverable_initial_sample_due: '', deliverable_approved_sample_due: '', deliverable_size_range_due: '', deliverable_bulk_due: '', deliverable_product_analysis: false, deliverable_product_analysis_due: '', deliverable_in_house_patternmaking: false, deliverable_in_house_patternmaking_due: '', deliverable_in_house_proto: false, deliverable_in_house_proto_due: '', deliverable_in_house_manufacturing: false, deliverable_in_house_manufacturing_due: '' })
 const hubProjects = ref([])
 const loadingHubProjects = ref(false)
 
 const openAddProject = async (client) => {
   targetClient.value = client
-  projectForm.value = { title: '', amount_paid: null, amount_owed: null, milestones: '', due_date: '', in_menu_hub: false, hub_project_id: null }
+  projectForm.value = { title: '', amount_paid: null, amount_owed: null, milestones: '', due_date: '', add_to_hub: false, hub_project_id: null, deliverable_trend_analysis: false, deliverable_trend_analysis_due: '', deliverable_design: false, deliverable_design_due: '', deliverable_branding: false, deliverable_branding_due: '', deliverable_tech_pack: false, deliverable_tech_pack_due: '', deliverable_product_dev: false, deliverable_manu_quotes_due: '', deliverable_initial_sample_due: '', deliverable_approved_sample_due: '', deliverable_size_range_due: '', deliverable_bulk_due: '', deliverable_product_analysis: false, deliverable_product_analysis_due: '', deliverable_in_house_patternmaking: false, deliverable_in_house_patternmaking_due: '', deliverable_in_house_proto: false, deliverable_in_house_proto_due: '', deliverable_in_house_manufacturing: false, deliverable_in_house_manufacturing_due: '' }
   loadingHubProjects.value = true
   showAddProjectModal.value = true
   const { data } = await hubSupabase.from('projects').select('id, project_name, client_name, status').order('created_at', { ascending: false })
@@ -284,10 +341,41 @@ const saveProject = async () => {
       amount_owed: projectForm.value.amount_owed || 0,
       milestones: projectForm.value.milestones || null,
       due_date: projectForm.value.due_date || null,
-      in_menu_hub: projectForm.value.in_menu_hub,
       hub_project_id: projectForm.value.hub_project_id || null,
+      deliverable_trend_analysis: projectForm.value.deliverable_trend_analysis,
+      deliverable_trend_analysis_due: projectForm.value.deliverable_trend_analysis_due || null,
+      deliverable_design: projectForm.value.deliverable_design,
+      deliverable_design_due: projectForm.value.deliverable_design_due || null,
+      deliverable_branding: projectForm.value.deliverable_branding,
+      deliverable_branding_due: projectForm.value.deliverable_branding_due || null,
+      deliverable_tech_pack: projectForm.value.deliverable_tech_pack,
+      deliverable_tech_pack_due: projectForm.value.deliverable_tech_pack_due || null,
+      deliverable_product_dev: projectForm.value.deliverable_product_dev,
+      deliverable_manu_quotes_due: projectForm.value.deliverable_manu_quotes_due || null,
+      deliverable_initial_sample_due: projectForm.value.deliverable_initial_sample_due || null,
+      deliverable_approved_sample_due: projectForm.value.deliverable_approved_sample_due || null,
+      deliverable_size_range_due: projectForm.value.deliverable_size_range_due || null,
+      deliverable_bulk_due: projectForm.value.deliverable_bulk_due || null,
+      deliverable_product_analysis: projectForm.value.deliverable_product_analysis,
+      deliverable_product_analysis_due: projectForm.value.deliverable_product_analysis_due || null,
+      deliverable_in_house_patternmaking: projectForm.value.deliverable_in_house_patternmaking,
+      deliverable_in_house_patternmaking_due: projectForm.value.deliverable_in_house_patternmaking_due || null,
+      deliverable_in_house_proto: projectForm.value.deliverable_in_house_proto,
+      deliverable_in_house_proto_due: projectForm.value.deliverable_in_house_proto_due || null,
+      deliverable_in_house_manufacturing: projectForm.value.deliverable_in_house_manufacturing,
+      deliverable_in_house_manufacturing_due: projectForm.value.deliverable_in_house_manufacturing_due || null,
     }]).select().single()
     if (error) throw error
+    if (projectForm.value.add_to_hub) {
+      const { data: newHubProject, error: hubError } = await hubSupabase
+        .from('projects')
+        .insert([{ project_name: newProj.title, client_name: targetClient.value.name || '', status: 'active' }])
+        .select('id')
+        .single()
+      if (!hubError && newHubProject) {
+        await supabase.from('projects').update({ hub_project_id: newHubProject.id }).eq('id', newProj.id)
+      }
+    }
     await supabase.from('activity_logs').insert({
       event_type: 'project_created',
       client_id: targetClient.value.id,
@@ -322,7 +410,7 @@ const fetchClients = async () => {
     loading.value = true
     const [clientsRes, projectsRes] = await Promise.all([
       supabase.from('clients').select('*').order('created_at', { ascending: false }),
-      supabase.from('projects').select('id, title, pipeline_stage, client_id, sow_status, sow_sent_date, sow_signed_date')
+      supabase.from('projects').select('id, title, pipeline_stage, client_id, sow_status, sow_sent_date, sow_signed_date').is('archived_at', null)
     ])
     if (clientsRes.error) throw clientsRes.error
     const projectsByClient = {}
@@ -368,7 +456,8 @@ const openModal = (client = null) => {
     editingId.value = null
     form.value = {
       name: '', email: '', company: '', phone_number: '', country: '', lead_source: 'Manual Entry',
-      brand_stage: '', investment_level: '', development_timeline: '', support_level: '', primary_issue: ''
+      brand_stage: '', investment_level: '', development_timeline: '', support_level: '', primary_issue: '',
+      scheduled_date: '', meeting_link: ''
     }
   }
   showModal.value = true
@@ -395,6 +484,8 @@ const saveClient = async () => {
       development_timeline: nullify(form.value.development_timeline),
       support_level:        nullify(form.value.support_level),
       primary_issue:        nullify(form.value.primary_issue),
+      scheduled_date:       form.value.scheduled_date || null,
+      meeting_link:         nullify(form.value.meeting_link),
     }
     if (editingId.value) {
       const { error } = await supabase.from('clients').update(payload).eq('id', editingId.value)

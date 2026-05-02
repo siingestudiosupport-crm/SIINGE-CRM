@@ -172,7 +172,7 @@ const fetchData = async () => {
   try {
     loading.value = true
     const [projectsRes, clientsRes] = await Promise.all([
-      supabase.from('projects').select('*'),
+      supabase.from('projects').select('*').is('archived_at', null),
       supabase.from('clients').select('*')
     ])
     if (projectsRes.error) throw projectsRes.error
@@ -201,10 +201,14 @@ const kpiClosed = computed(() => {
   return filtered.reduce((sum, p) => sum + (Number(p.amount_paid) || 0), 0)
 })
 
-// Active Pipeline: no payment yet, not Churn
+// Active Pipeline: proposal values of Open deals with no payment yet, excluding Churn and those with amount_owed
 const kpiActivePipeline = computed(() => {
   return projects.value
-    .filter(p => p.pipeline_stage !== 'Churn' && !(Number(p.amount_paid) > 0))
+    .filter(p =>
+      p.pipeline_stage !== 'Churn' &&
+      !(Number(p.amount_paid) > 0) &&
+      !(Number(p.amount_owed) > 0)
+    )
     .reduce((sum, p) => sum + (Number(p.proposal_value) || 0), 0)
 })
 
@@ -213,15 +217,15 @@ const kpiExpectedIncome = computed(() => {
   return projects.value.reduce((sum, p) => sum + (Number(p.amount_owed) || 0), 0)
 })
 
-// Avg Client LTV: average of per-client sum of amount_paid
+// Avg Client LTV: average of per-client sum of amount_paid + amount_owed
 const kpiAvgLTV = computed(() => {
   const totals = {}
   projects.value.forEach(p => {
-    if (p.client_id && Number(p.amount_paid) > 0) {
-      totals[p.client_id] = (totals[p.client_id] || 0) + Number(p.amount_paid)
+    if (p.client_id) {
+      totals[p.client_id] = (totals[p.client_id] || 0) + (Number(p.amount_paid) || 0) + (Number(p.amount_owed) || 0)
     }
   })
-  const vals = Object.values(totals)
+  const vals = Object.values(totals).filter(v => v > 0)
   if (!vals.length) return 0
   return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
 })

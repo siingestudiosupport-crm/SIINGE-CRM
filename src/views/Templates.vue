@@ -138,7 +138,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../lib/supabaseClient'
 
-const TRIGGER_ORDER = ['proposal_3d', 'proposal_7d', 'proposal_weekly', 'call_completed_24h', 'cold_30d']
+const TRIGGER_ORDER = ['proposal_3d', 'proposal_7d', 'proposal_weekly', 'call_completed_24h', 'cold_30d', 'review_request']
 
 const TRIGGER_META = {
   proposal_3d:         { label: 'Proposal Follow-up',   timing: '3 days after SOW sent',           color: 'var(--caution)' },
@@ -146,6 +146,7 @@ const TRIGGER_META = {
   proposal_weekly:     { label: 'Weekly Follow-up',     timing: 'Weekly until close or churn',     color: 'var(--ember)'   },
   call_completed_24h:  { label: 'Post-Call Nudge',      timing: '24h after strategy call',         color: 'var(--info)'    },
   cold_30d:            { label: 'Cold Re-engagement',   timing: '30 days of inactivity',           color: 'var(--ink-3)'   },
+  review_request:      { label: 'Request Review',       timing: 'After project complete',          color: 'var(--positive)' },
 }
 
 const templates      = ref([])

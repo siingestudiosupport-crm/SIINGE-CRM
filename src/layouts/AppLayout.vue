@@ -2,7 +2,7 @@
   <div class="flex min-h-screen w-full" style="background: var(--paper);">
 
     <!-- Sidebar -->
-    <aside class="flex flex-col flex-shrink-0" style="width: 240px; background: var(--ink); color: var(--paper);">
+    <aside class="flex flex-col flex-shrink-0" style="width: 240px; background: var(--ink); color: var(--paper); position: sticky; top: 0; height: 100vh; overflow-y: auto;">
       <!-- Logo block -->
       <div style="padding: 20px 24px 16px; border-bottom: 1px solid rgba(250,247,242,0.08); display: flex; align-items: center; gap: 10px;">
         <img src="../assets/siinge-logo-white.png" alt="SIINGE" style="height: 28px; filter: brightness(0) invert(1); flex-shrink: 0;" />
@@ -166,11 +166,12 @@ import { Gauge, Kanban, Users, FileText, CalendarDays, Bell, Mail } from 'lucide
 import { supabase } from '../lib/supabaseClient'
 
 const TRIGGER_META = {
-  proposal_3d:        { label: 'Proposal Follow-up',  color: 'var(--caution)' },
-  proposal_7d:        { label: 'Second Follow-up',    color: 'var(--ember)'   },
-  proposal_weekly:    { label: 'Weekly Follow-up',    color: 'var(--ember)'   },
-  call_completed_24h: { label: 'Post-Call Nudge',     color: 'var(--info)'    },
-  cold_30d:           { label: 'Cold Re-engagement',  color: 'var(--ink-3)'   },
+  proposal_3d:        { label: 'Proposal Follow-up',  color: 'var(--caution)'  },
+  proposal_7d:        { label: 'Second Follow-up',    color: 'var(--ember)'    },
+  proposal_weekly:    { label: 'Weekly Follow-up',    color: 'var(--ember)'    },
+  call_completed_24h: { label: 'Post-Call Nudge',     color: 'var(--info)'     },
+  cold_30d:           { label: 'Cold Re-engagement',  color: 'var(--ink-3)'    },
+  review_request:     { label: 'Request Review',      color: 'var(--positive)' },
 }
 
 const notifications = ref([])

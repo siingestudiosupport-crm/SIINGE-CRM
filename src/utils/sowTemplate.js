@@ -13,6 +13,7 @@ export const generateSOWHTML = (data) => {
     timeline,
     fees_payment,
     signatureImageBase64,  // client's signature from canvas
+    studioSignatureBase64, // studio's pre-loaded signature
   } = data
 
   return `
@@ -37,9 +38,12 @@ export const generateSOWHTML = (data) => {
       min-height: 11in;
       margin: 0 auto;
       padding: 0.85in 0.9in;
-      page-break-after: always;
       background: white;
       position: relative;
+    }
+
+    .page:last-child {
+      min-height: 0;
     }
 
     .page-number {
@@ -101,7 +105,6 @@ export const generateSOWHTML = (data) => {
 
     .form-field-inline {
       display: inline-block;
-      border-bottom: 1px solid #333;
       min-width: 120px;
       margin: 0 3px;
       padding: 0 3px 1px;
@@ -109,7 +112,6 @@ export const generateSOWHTML = (data) => {
     }
 
     .form-field-block {
-      border-bottom: 1px solid #ccc;
       padding: 6px 0 8px;
       margin: 6px 0 12px;
       white-space: pre-wrap;
@@ -121,10 +123,9 @@ export const generateSOWHTML = (data) => {
 
     .form-field-block.large {
       border: none;
-      border-left: 3px solid #ddd;
-      padding: 8px 14px;
+      padding: 0;
       margin: 8px 0 16px;
-      background: #fafafa;
+      background: transparent;
       min-height: 60px;
       white-space: pre-wrap;
       word-wrap: break-word;
@@ -133,9 +134,6 @@ export const generateSOWHTML = (data) => {
     .intro-block {
       margin: 18px 0;
       padding: 14px 18px;
-      border: 1px solid #e0e0e0;
-      background: #fafafa;
-      border-radius: 2px;
     }
 
     .intro-block p {
@@ -186,7 +184,6 @@ export const generateSOWHTML = (data) => {
     }
 
     .sig-value {
-      border-bottom: 1px solid #333;
       min-height: 1.4em;
       padding-bottom: 2px;
       font-size: 11.5px;
@@ -209,7 +206,7 @@ export const generateSOWHTML = (data) => {
 
     @media print {
       body { margin: 0; }
-      .page { margin: 0; page-break-after: always; }
+      .page { margin: 0; }
     }
   </style>
 </head>
@@ -227,7 +224,6 @@ export const generateSOWHTML = (data) => {
   <div class="intro-block">
     <p class="party-label">Client</p>
     <p><strong>${client_name || '&nbsp;'}</strong>${client_title ? `, ${client_title}` : ''}</p>
-    ${business_name ? `<p>${business_name}</p>` : ''}
     ${company_name ? `<p>${company_name}</p>` : ''}
     ${full_address ? `<p>${full_address}</p>` : ''}
   </div>
@@ -390,7 +386,9 @@ export const generateSOWHTML = (data) => {
         <p class="sig-value">Founder</p>
 
         <p class="sig-field-label">Signature</p>
-        <div class="sig-canvas-box"></div>
+        <div class="sig-canvas-box">
+          ${studioSignatureBase64 ? `<img src="data:image/png;base64,${studioSignatureBase64}" />` : ''}
+        </div>
 
         <p class="sig-field-label">Date</p>
         <p class="sig-value">${date_3 || '&nbsp;'}</p>

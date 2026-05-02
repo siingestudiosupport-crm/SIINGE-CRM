@@ -91,12 +91,12 @@
               </div>
 
               <!-- Status chips -->
-              <div class="flex flex-wrap gap-1" style="margin-bottom: 10px;" v-if="project.client?.nda_status || project.client?.sow_status">
+              <div class="flex flex-wrap gap-1" style="margin-bottom: 10px;" v-if="project.client?.nda_status || project.sow_status">
                 <span v-if="project.client?.nda_status" :style="getStatusChipStyle(project.client.nda_status)">
                   NDA: {{ project.client.nda_status }}
                 </span>
-                <span v-if="project.client?.sow_status" :style="getStatusChipStyle(project.client.sow_status)">
-                  SOW: {{ project.client.sow_status }}
+                <span v-if="project.sow_status" :style="getStatusChipStyle(project.sow_status)">
+                  SOW: {{ project.sow_status }}
                 </span>
               </div>
 
@@ -267,6 +267,7 @@ const fetchProjects = async () => {
     const { data, error } = await supabase
       .from('projects')
       .select('*, client:clients(*)')
+      .is('archived_at', null)
       .order('created_at', { ascending: false })
     if (error) throw error
     projects.value = data || []
@@ -369,7 +370,7 @@ const deleteAllProjects = async () => {
   if (!second) return
 
   try {
-    const { error } = await supabase.from('projects').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+    const { error } = await supabase.from('projects').update({ archived_at: new Date().toISOString() }).is('archived_at', null)
     if (error) throw error
     projects.value = []
     hubProjectMap.value = {}

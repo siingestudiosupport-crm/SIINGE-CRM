@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div v-if="isOpen" class="fixed inset-0 z-40 flex items-end justify-end">
     <div class="absolute inset-0 transition-opacity" style="background: rgba(14,14,12,0.4);" @click="$emit('close')"></div>
 
@@ -85,10 +85,14 @@
               </div>
             </div>
             <div>
-              <label class="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">Proposal Value</label>
-              <div class="flex items-center border border-gray-300 rounded-lg px-3 bg-white focus-within:ring-2 focus-within:ring-blue-500 shadow-sm transition-all">
+              <label class="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">{{ project?.id ? 'Proposal Value' : 'Client LTV' }}</label>
+              <div v-if="project?.id" class="flex items-center border border-gray-300 rounded-lg px-3 bg-white focus-within:ring-2 focus-within:ring-blue-500 shadow-sm transition-all">
                 <span class="text-gray-500 mr-1 font-bold">$</span>
                 <input v-model="localEdits.proposal_value" type="number" class="w-full bg-transparent border-none p-2.5 outline-none text-sm font-bold text-gray-800" placeholder="0.00" />
+              </div>
+              <div v-else class="flex items-center border border-gray-300 rounded-lg px-3 py-2.5 bg-gray-50">
+                <span class="text-gray-500 mr-1 font-bold">$</span>
+                <span class="text-sm font-bold text-gray-800">{{ clientLTV.toLocaleString() }}</span>
               </div>
             </div>
           </section>
@@ -126,6 +130,13 @@
             </div>
           </section>
 
+          <section v-if="localEdits.pipeline_stage === 'Project Complete'" class="animate-fade-in" style="background: var(--positive-soft); border: 1px solid #B8C4A0; border-radius: 4px; padding: 14px 16px;">
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+              <input type="checkbox" v-model="localEdits.review_requested" style="width: 15px; height: 15px; accent-color: var(--positive); flex-shrink: 0;" />
+              <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: var(--positive);">Review Requested</span>
+            </label>
+          </section>
+
           <section v-if="localEdits.pipeline_stage === 'Churn'" class="p-5 animate-fade-in" style="background: var(--critical-soft); border: 1px solid var(--critical); border-radius: 4px;">
             <div class="flex items-center gap-2 mb-3">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--critical)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
@@ -144,10 +155,8 @@
 
           <section class="grid grid-cols-2 gap-4">
             <div class="p-4 bg-gray-50 rounded-xl border border-gray-100 flex flex-col justify-center shadow-sm">
-              <p class="text-[10px] font-bold text-gray-400 uppercase mb-1">Meeting Date</p>
-              <p class="font-bold text-gray-800 text-sm">
-                {{ project.scheduled_date ? new Date(project.scheduled_date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Not scheduled' }}
-              </p>
+              <p class="text-[10px] font-bold text-gray-400 uppercase mb-2">Meeting Date</p>
+              <input v-model="localEdits.scheduled_date" type="datetime-local" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none text-gray-800 font-medium transition-all shadow-sm" />
               <a v-if="project.meeting_link" :href="project.meeting_link" target="_blank" class="mt-2 w-max inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all shadow hover:shadow-md">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                 Join Meeting
@@ -286,6 +295,40 @@
                 </div>
               </div>
 
+              <!-- DEAL NOT CLOSED -->
+              <div style="border-top: 1px solid var(--bone-edge); padding-top: 14px;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 12px;">
+                  <input type="checkbox" v-model="localEdits.deal_not_closed" style="width: 16px; height: 16px; accent-color: var(--ink); cursor: pointer;" />
+                  <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-2);">Deal Not Closed</span>
+                </label>
+
+                <div v-if="localEdits.deal_not_closed" style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 2px; padding: 12px; display: flex; flex-direction: column; gap: 10px;">
+                  <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                      <input type="checkbox" value="Too expensive" v-model="localEdits.deal_not_closed_reasons" style="width: 14px; height: 14px; accent-color: var(--ink);" />
+                      <span style="font-size: 10px; color: var(--ink-2);">Too expensive</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                      <input type="checkbox" value="Timeline mismatch" v-model="localEdits.deal_not_closed_reasons" style="width: 14px; height: 14px; accent-color: var(--ink);" />
+                      <span style="font-size: 10px; color: var(--ink-2);">Timeline mismatch</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                      <input type="checkbox" value="Not ready" v-model="localEdits.deal_not_closed_reasons" style="width: 14px; height: 14px; accent-color: var(--ink);" />
+                      <span style="font-size: 10px; color: var(--ink-2);">Not ready</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                      <input type="checkbox" value="Ghosted" v-model="localEdits.deal_not_closed_reasons" style="width: 14px; height: 14px; accent-color: var(--ink);" />
+                      <span style="font-size: 10px; color: var(--ink-2);">Ghosted</span>
+                    </label>
+                  </div>
+
+                  <div style="border-top: 1px solid var(--bone-edge); padding-top: 10px;">
+                    <label style="display: block; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-3); margin-bottom: 6px;">Notes</label>
+                    <textarea v-model="localEdits.deal_not_closed_notes" rows="3" placeholder="Additional comments..." style="width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 12px; color: var(--ink-2); background: var(--paper); outline: none; resize: vertical; line-height: 1.5;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'"></textarea>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </section>
         </div>
@@ -333,8 +376,9 @@
               </div>
             </div>
 
-            <div v-else style="padding: 16px; background: var(--positive-soft); border: 1px solid #B8C4A0; border-radius: 4px; font-size: 13px; color: var(--positive); font-weight: 600;">
-              SOW already sent for this project — content is locked. Use Contracts Log → Reset to re-edit.
+            <div v-else style="padding: 16px; background: var(--positive-soft); border: 1px solid #B8C4A0; border-radius: 4px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+              <span style="font-size: 13px; color: var(--positive); font-weight: 600;">SOW already sent — content is locked.</span>
+              <button @click="resetDocument('SOW')" style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-4); background: var(--paper); border: 1px solid var(--ink-5); border-radius: 2px; padding: 5px 10px; cursor: pointer; white-space: nowrap; flex-shrink: 0;">Reset SOW</button>
             </div>
 
             <div v-if="!project.sow_sent_date" style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; padding: 16px;">
@@ -380,6 +424,23 @@
             <div v-if="availableDocs.length === 0" class="p-5 bg-gray-50 border border-gray-200 rounded-2xl text-center text-sm text-gray-500 font-medium">
               All documents have been dispatched. View status in the Contracts Log tab.
             </div>
+
+            <!-- Reset contracts -->
+            <div v-if="project?.client?.nda_sent_date || project?.sow_sent_date || project?.client?.sow_sent_date"
+              style="display: flex; gap: 10px; padding-top: 4px;">
+              <button v-if="project?.client?.nda_sent_date" @click="resetDocument('NDA')"
+                style="flex: 1; font-family: var(--font-sans); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-4); background: var(--paper); border: 1px solid var(--ink-5); border-radius: 2px; padding: 7px 10px; cursor: pointer; transition: all 120ms;"
+                @mouseenter="e=>(e.currentTarget.style.color='var(--ink)',e.currentTarget.style.borderColor='var(--ink)')"
+                @mouseleave="e=>(e.currentTarget.style.color='var(--ink-4)',e.currentTarget.style.borderColor='var(--ink-5)')">
+                Reset NDA
+              </button>
+              <button v-if="project?.sow_sent_date || project?.client?.sow_sent_date" @click="resetDocument('SOW')"
+                style="flex: 1; font-family: var(--font-sans); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-4); background: var(--paper); border: 1px solid var(--ink-5); border-radius: 2px; padding: 7px 10px; cursor: pointer; transition: all 120ms;"
+                @mouseenter="e=>(e.currentTarget.style.color='var(--ink)',e.currentTarget.style.borderColor='var(--ink)')"
+                @mouseleave="e=>(e.currentTarget.style.color='var(--ink-4)',e.currentTarget.style.borderColor='var(--ink-5)')">
+                Reset SOW
+              </button>
+            </div>
           </template>
         </div>
 
@@ -406,7 +467,7 @@
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 6px;">
               <div style="display: flex; gap: 5px; flex-wrap: wrap;">
                 <span v-if="project?.client?.nda_status" :style="getStatusClass(project.client.nda_status) + ' padding: 2px 6px; font-size: 8px;'">NDA: {{ project.client.nda_status }}</span>
-                <span v-if="project?.client?.sow_status" :style="getStatusClass(project.client.sow_status) + ' padding: 2px 6px; font-size: 8px;'">SOW: {{ project.client.sow_status }}</span>
+                <span v-if="project?.sow_status" :style="getStatusClass(project.sow_status) + ' padding: 2px 6px; font-size: 8px;'">SOW: {{ project.sow_status }}</span>
               </div>
               <span v-if="proj.amount_paid || proj.amount_owed" style="font-size: 11px; font-weight: 700; color: var(--ink-3); font-family: var(--font-mono); white-space: nowrap;">
                 ${{ (proj.amount_paid || 0).toLocaleString() }} / ${{ ((proj.amount_paid || 0) + (proj.amount_owed || 0)).toLocaleString() }}
@@ -478,24 +539,24 @@
                       <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-4); margin: 0;">{{ proj.pipeline_stage }}</p>
                     </div>
                     <div class="flex flex-col items-end gap-2">
-                      <span v-if="proj.sow_sent_date || project?.client?.sow_sent_date || ['Sent','Signed'].includes(project?.client?.sow_status)" :class="getStatusClass((proj.sow_signed_date || project?.client?.sow_signed_date) ? 'Signed' : 'Sent')">
-                        {{ (proj.sow_signed_date || project?.client?.sow_signed_date) ? 'Signed' : 'Sent' }}
+                      <span v-if="proj.sow_sent_date || ['Sent','Signed'].includes(proj.sow_status)" :class="getStatusClass(proj.sow_signed_date ? 'Signed' : 'Sent')">
+                        {{ proj.sow_signed_date ? 'Signed' : 'Sent' }}
                       </span>
                       <span v-else style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-5);">Draft</span>
-                      <button v-if="proj.sow_sent_date || project?.client?.sow_sent_date" @click="resetDocument('SOW')"
+                      <button v-if="proj.sow_sent_date" @click="resetDocument('SOW')"
                         style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-4); background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0;">
                         Reset
                       </button>
                     </div>
                   </div>
 
-                  <div v-if="proj.sow_sent_date || project?.client?.sow_sent_date" class="space-y-1">
-                    <p style="font-size: 11px; color: var(--ink-3);">Sent: <span style="font-family: var(--font-mono); color: var(--ink-2);">{{ formatDate(proj.sow_sent_date || project?.client?.sow_sent_date) }}</span></p>
-                    <p v-if="proj.sow_signed_date || project?.client?.sow_signed_date" style="font-size: 11px; font-weight: 700; color: var(--positive);">Signed: <span style="font-family: var(--font-mono);">{{ formatDate(proj.sow_signed_date || project?.client?.sow_signed_date) }}</span></p>
+                  <div v-if="proj.sow_sent_date" class="space-y-1">
+                    <p style="font-size: 11px; color: var(--ink-3);">Sent: <span style="font-family: var(--font-mono); color: var(--ink-2);">{{ formatDate(proj.sow_sent_date) }}</span></p>
+                    <p v-if="proj.sow_signed_date" style="font-size: 11px; font-weight: 700; color: var(--positive);">Signed: <span style="font-family: var(--font-mono);">{{ formatDate(proj.sow_signed_date) }}</span></p>
                   </div>
 
-                  <button v-if="(proj.sow_signed_date || project?.client?.sow_signed_date) && (proj.sow_pdf_path || project?.client?.sow_pdf_path)"
-                    @click="downloadFromVault(proj.sow_pdf_path || project?.client?.sow_pdf_path)"
+                  <button v-if="proj.sow_signed_date && proj.sow_pdf_path"
+                    @click="downloadFromVault(proj.sow_pdf_path)"
                     class="w-full flex items-center justify-center gap-3"
                     style="margin-top: 10px; padding: 9px; background: var(--positive-soft); color: var(--positive); border: 1px solid #B8C4A0; border-radius: 2px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; cursor: pointer; transition: opacity 120ms;"
                     @mouseenter="e=>e.currentTarget.style.opacity='0.8'" @mouseleave="e=>e.currentTarget.style.opacity='1'">
@@ -692,6 +753,7 @@ const deliverableItems = [
   { label: 'Branding / Packaging Design',   model: 'deliverable_branding', dueField: 'deliverable_branding_due' },
   { label: 'Tech Pack',                     model: 'deliverable_tech_pack', dueField: 'deliverable_tech_pack_due' },
   { label: 'Product Development Mgmt',      model: 'deliverable_product_dev', productDev: true },
+  { label: 'Product Analysis X Refinement', model: 'deliverable_product_analysis', dueField: 'deliverable_product_analysis_due' },
   { label: 'In House Patternmaking',        model: 'deliverable_in_house_patternmaking', dueField: 'deliverable_in_house_patternmaking_due' },
   { label: 'In House Proto',               model: 'deliverable_in_house_proto', dueField: 'deliverable_in_house_proto_due' },
   { label: 'In House Manufacturing',        model: 'deliverable_in_house_manufacturing', dueField: 'deliverable_in_house_manufacturing_due' },
@@ -720,7 +782,12 @@ const buildLocalEdits = (p) => {
     amount_owed: p?.amount_owed || null,
     milestones: p?.milestones || '',
     due_date: p?.due_date || '',
+    scheduled_date: p?.scheduled_date ? p.scheduled_date.substring(0, 16) : '',
     in_menu_hub: p?.in_menu_hub || false,
+    review_requested: p?.review_requested || false,
+    deal_not_closed: p?.deal_not_closed || false,
+    deal_not_closed_reasons: p?.deal_not_closed_reasons ? p.deal_not_closed_reasons.split(',') : [],
+    deal_not_closed_notes: p?.deal_not_closed_notes || '',
     snooze_until: p?.snooze_until ? p.snooze_until.substring(0, 10) : '',
     manual_sow_date: '',
     deliverable_trend_analysis: p?.deliverable_trend_analysis || false,
@@ -729,6 +796,8 @@ const buildLocalEdits = (p) => {
     deliverable_design_due: p?.deliverable_design_due || '',
     deliverable_tech_pack: p?.deliverable_tech_pack || false,
     deliverable_tech_pack_due: p?.deliverable_tech_pack_due || '',
+    deliverable_product_analysis: p?.deliverable_product_analysis || false,
+    deliverable_product_analysis_due: p?.deliverable_product_analysis_due || '',
     deliverable_product_dev: p?.deliverable_product_dev || false,
     deliverable_manu_quotes_due: p?.deliverable_manu_quotes_due || '',
     deliverable_initial_sample_due: p?.deliverable_initial_sample_due || '',
@@ -765,6 +834,7 @@ const fetchClientProjects = async () => {
     .from('projects')
     .select('*')
     .eq('client_id', props.project.client_id)
+    .is('archived_at', null)
     .order('created_at', { ascending: false })
   if (allErr) { console.error('fetchClientProjects:', allErr.message); return }
   // Completed projects go to the bottom
@@ -776,6 +846,7 @@ const fetchClientProjects = async () => {
     .from('projects')
     .select('*')
     .eq('client_id', props.project.client_id)
+    .is('archived_at', null)
     .order('created_at', { ascending: false })
   if (sowErr) console.error('fetchClientProjects sow:', sowErr.message)
   clientProjects.value = sow || []
@@ -785,7 +856,7 @@ const fetchClientProjects = async () => {
 const availableDocs = computed(() => {
   const docs = []
   const nda = props.project?.client?.nda_status
-  const sow = props.project?.client?.sow_status
+  const sow = props.project?.sow_status
   if (!props.project?.id) {
     // Vista tarjeta de cliente: solo NDA
     if (nda !== 'Sent' && nda !== 'Signed') docs.push('NDA')
@@ -824,7 +895,7 @@ const suggestedAction = computed(() => {
   const c = p?.client
   if (!p || !c) return null
   if (p.pipeline_stage === 'Project Complete') return { title: 'Post-Project Follow-up', desc: 'In 30 days, check-in for next collection or upsell development.' }
-  if (c.sow_status === 'Sent' && !c.sow_signed_date) return { title: 'Proposal Follow-up', desc: 'No response yet? Follow up in 3 days to maintain momentum.' }
+  if (p.sow_status === 'Sent' && !p.sow_signed_date) return { title: 'Proposal Follow-up', desc: 'No response yet? Follow up in 3 days to maintain momentum.' }
   if (p.pipeline_stage === 'Call Booked') return { title: 'High Priority: Send Proposal', desc: 'Call completed. Send SOW within the next 24 hours to secure the deal.' }
   if (c.client_tier === 'Early-stage' && p.pipeline_stage === 'Intake Form Received') return { title: 'Nurture Lead', desc: 'Early-stage founder. Re-engage if no meeting is booked.' }
   return null
@@ -832,10 +903,14 @@ const suggestedAction = computed(() => {
 
 const timeToClose = computed(() => {
   const p = props.project
-  if (!p || !p.created_at || (!p.closed_at && !p.client?.sow_signed_date)) return null
+  if (!p || !p.created_at || (!p.closed_at && !p.sow_signed_date)) return null
   const start = new Date(p.created_at)
-  const end = new Date(p.closed_at || p.client.sow_signed_date)
+  const end = new Date(p.closed_at || p.sow_signed_date)
   return Math.ceil(Math.abs(end - start) / (1000 * 60 * 60 * 24))
+})
+
+const clientLTV = computed(() => {
+  return clientProjects.value.reduce((sum, p) => sum + (Number(p.amount_paid) || 0) + (Number(p.amount_owed) || 0), 0)
 })
 
 const getStatusClass = (s) => {
@@ -869,11 +944,18 @@ const updateOverview = async () => {
       amount_owed: localEdits.value.amount_owed || 0,
       milestones: localEdits.value.milestones || null,
       due_date: localEdits.value.due_date || null,
+      scheduled_date: localEdits.value.scheduled_date || null,
       in_menu_hub: localEdits.value.in_menu_hub,
+      review_requested: localEdits.value.review_requested,
+      deal_not_closed: localEdits.value.deal_not_closed,
+      deal_not_closed_reasons: localEdits.value.deal_not_closed_reasons.join(','),
+      deal_not_closed_notes: localEdits.value.deal_not_closed_notes,
       deliverable_design: localEdits.value.deliverable_design,
       deliverable_design_due: localEdits.value.deliverable_design_due || null,
       deliverable_tech_pack: localEdits.value.deliverable_tech_pack,
       deliverable_tech_pack_due: localEdits.value.deliverable_tech_pack_due || null,
+      deliverable_product_analysis: localEdits.value.deliverable_product_analysis,
+      deliverable_product_analysis_due: localEdits.value.deliverable_product_analysis_due || null,
       deliverable_product_dev: localEdits.value.deliverable_product_dev,
       deliverable_trend_analysis: localEdits.value.deliverable_trend_analysis,
       deliverable_trend_analysis_due: localEdits.value.deliverable_trend_analysis_due || null,
@@ -893,6 +975,17 @@ const updateOverview = async () => {
     }
     const { error: updateErr } = await supabase.from('projects').update(updates).eq('id', props.project.id)
     if (updateErr) throw updateErr
+    if (localEdits.value.pipeline_stage === 'Project Complete' && props.project.pipeline_stage !== 'Project Complete') {
+      await supabase.from('email_queue').insert({
+        client_id: props.project.client_id,
+        client_name: props.project.client?.name || '',
+        client_email: props.project.client?.email || '',
+        project_id: props.project.id,
+        project_title: props.project.title || '',
+        trigger_type: 'review_request',
+        due_at: new Date().toISOString(),
+      })
+    }
     if (props.project.hub_project_id) {
       await hubSupabase.from('projects').update({ crm_stage: localEdits.value.pipeline_stage }).eq('id', props.project.hub_project_id)
     }
@@ -915,8 +1008,6 @@ const saveSowContent = async () => {
   }
   const { error: projErr } = await supabase.from('projects').update(sowContent).eq('id', props.project.id)
   if (projErr) throw projErr
-  const { error: clientErr } = await supabase.from('clients').update(sowContent).eq('id', props.project.client_id)
-  if (clientErr) throw clientErr
 }
 
 const formatPdfDate = (iso) => {
@@ -924,13 +1015,26 @@ const formatPdfDate = (iso) => {
   return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })
 }
 
+const fetchBase64 = async (url) => {
+  const res = await fetch(url)
+  const blob = await res.blob()
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve(reader.result.split(',')[1])
+    reader.readAsDataURL(blob)
+  })
+}
+
 const buildSowPdf = async (forDownload = false, flatten = true) => {
   if (!props.project?.client) throw new Error('Missing client for SOW preview')
 
+  const studioSignatureBase64 = await fetchBase64('/signature.png').catch(() => null)
+
+  const today = new Date().toISOString()
   const htmlContent = generateSOWHTML({
-    date_1: formatPdfDate(props.project.client?.sow_sent_date || ''),
+    date_1: formatPdfDate(props.project.sow_sent_date || props.project.client?.sow_sent_date || today),
     date_2: formatPdfDate(props.project.client?.sow_signed_date || ''),
-    date_3: formatPdfDate(props.project.client?.sow_sent_date || ''),
+    date_3: formatPdfDate(props.project.sow_sent_date || props.project.client?.sow_sent_date || today),
     company_name: props.project.client.company || '',
     full_address: props.project.client.full_address || '',
     business_name: props.project.client.business_name || '',
@@ -940,6 +1044,7 @@ const buildSowPdf = async (forDownload = false, flatten = true) => {
     timeline: localEdits.value.sow_timeline,
     fees_payment: localEdits.value.sow_fees_payment,
     signatureImageBase64: null, // No signature for preview
+    studioSignatureBase64,
   })
 
   const element = document.createElement('div')
@@ -950,7 +1055,7 @@ const buildSowPdf = async (forDownload = false, flatten = true) => {
       margin: 0,
       filename: `SOW_${props.project.client.company}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
+      html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
     })
     .from(element)
@@ -1050,7 +1155,7 @@ const deleteProject = async () => {
     project_title: props.project.title,
     notes: `Stage: ${props.project.pipeline_stage || '—'}`
   })
-  await supabase.from('projects').delete().eq('id', props.project.id)
+  await supabase.from('projects').update({ archived_at: new Date().toISOString() }).eq('id', props.project.id)
   emit('updated')
   emit('close')
 }
@@ -1064,13 +1169,10 @@ const resetDocument = async (type) => {
     isDangerous: true
   })
   if (!confirmed) return
-  const key = type.toLowerCase()
-  const updates = { [`${key}_status`]: null, [`${key}_sent_date`]: null, [`${key}_opened_at`]: null }
-  await supabase.from('clients').update(updates).eq('id', props.project.client_id)
-
-  if (type === 'SOW' && props.project?.id) {
-    const projUpdates = { [`${key}_status`]: null, [`${key}_sent_date`]: null, [`${key}_signed_date`]: null, [`${key}_pdf_path`]: null }
-    await supabase.from('projects').update(projUpdates).eq('id', props.project.id)
+  if (type === 'NDA') {
+    await supabase.from('clients').update({ nda_status: null, nda_sent_date: null, nda_opened_at: null }).eq('id', props.project.client_id)
+  } else if (type === 'SOW' && props.project?.id) {
+    await supabase.from('projects').update({ sow_status: null, sow_sent_date: null, sow_signed_date: null, sow_pdf_path: null, sow_opened_at: null, sow_signature: null, sow_client_name: null, sow_client_title: null }).eq('id', props.project.id)
   }
 
   emit('updated')
@@ -1101,7 +1203,7 @@ const buildEmailData = () => {
 
   let linksHtml = ''
   if (selectedDocs.value.includes('SOW')) {
-    const sowLink = `${baseUrl}/portal/${props.project.client_id}/sow`
+    const sowLink = `${baseUrl}/portal/${props.project.client_id}/sow/${props.project.id}`
     linksHtml += `<a href="${sowLink}" style="color: #2563eb; text-decoration: underline;">Review & Sign SOW</a>`
   }
   if (selectedDocs.value.includes('NDA')) {
@@ -1168,14 +1270,14 @@ const dispatchEmail = async () => {
 
     const updates = {}
     if (selectedDocs.value.includes('NDA')) { updates.nda_status = 'Sent'; updates.nda_sent_date = sentDate }
-    if (selectedDocs.value.includes('SOW')) { updates.sow_status = 'Sent'; updates.sow_sent_date = sentDate }
 
-    const { error: dbError } = await supabase.from('clients').update(updates).eq('id', props.project.client_id)
-    if (dbError) throw dbError
+    if (Object.keys(updates).length) {
+      const { error: dbError } = await supabase.from('clients').update(updates).eq('id', props.project.client_id)
+      if (dbError) throw dbError
+    }
 
-    // Registrar sow_sent_date en el proyecto para el log por proyecto
     if (selectedDocs.value.includes('SOW') && props.project?.id) {
-      await supabase.from('projects').update({ sow_sent_date: sentDate }).eq('id', props.project.id)
+      await supabase.from('projects').update({ sow_status: 'Sent', sow_sent_date: sentDate }).eq('id', props.project.id)
     }
 
     for (const doc of selectedDocs.value) {
@@ -1206,6 +1308,7 @@ const getNextMilestone = (proj) => {
     { label: 'Design',                  date: proj.deliverable_design && proj.deliverable_design_due },
     { label: 'Branding',                date: proj.deliverable_branding && proj.deliverable_branding_due },
     { label: 'Tech Pack',               date: proj.deliverable_tech_pack && proj.deliverable_tech_pack_due },
+    { label: 'Product Analysis',        date: proj.deliverable_product_analysis && proj.deliverable_product_analysis_due },
     { label: 'Manu Quotes',             date: proj.deliverable_product_dev && proj.deliverable_manu_quotes_due },
     { label: 'Initial Sample',          date: proj.deliverable_product_dev && proj.deliverable_initial_sample_due },
     { label: 'Approved Sample',         date: proj.deliverable_product_dev && proj.deliverable_approved_sample_due },

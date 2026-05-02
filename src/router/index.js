@@ -25,8 +25,7 @@ const routes = [
     ]
   },
   {
-    // AHORA USA :clientId
-    path: '/portal/:clientId/:documentType',
+    path: '/portal/:clientId/:documentType/:projectId?',
     name: 'ClientPortal',
     component: ClientPortal,
     meta: { requiresAuth: false }
