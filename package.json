@@ -13,6 +13,7 @@
     "html2pdf.js": "^0.14.0",
     "lucide-vue-next": "^1.0.0",
     "pdf-lib": "^1.17.1",
+    "pdfmake": "^0.3.8",
     "pinia": "^3.0.4",
     "vue": "^3.5.30",
     "vue-router": "^4.6.4"

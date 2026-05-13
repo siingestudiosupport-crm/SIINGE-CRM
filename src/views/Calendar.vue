@@ -42,17 +42,17 @@
             >{{ cell.day }}</span>
           </div>
 
-          <!-- Project pills -->
-          <div v-for="proj in cell.projects" :key="proj.id" class="mb-1">
+          <!-- Event pills -->
+          <div v-for="evt in cell.events" :key="evt.id" class="mb-1">
             <button
-              @click="openProject(proj)"
-              style="width: 100%; text-align: left; padding: 3px 6px; border-radius: 2px; border: none; cursor: pointer; font-size: 10px; font-weight: 600; line-height: 1.3; transition: opacity 120ms; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;"
-              :style="getProjectPillStyle(proj.pipeline_stage)"
+              @click="evt.type === 'project' ? openProject(evt) : evt.type === 'zoom' ? openZoom(evt) : null"
+              style="width: 100%; text-align: left; padding: 3px 6px; border-radius: 2px; border: none; cursor: pointer; font-size: 9px; font-weight: 600; line-height: 1.2; transition: opacity 120ms; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;"
+              :style="getEventPillStyle(evt)"
               @mouseenter="e=>e.currentTarget.style.opacity='0.8'"
               @mouseleave="e=>e.currentTarget.style.opacity='1'"
-              :title="proj.title + ' — ' + proj.client_name"
+              :title="evt.title"
             >
-              {{ proj.title }}
+              {{ evt.label }}
             </button>
           </div>
         </div>
@@ -64,7 +64,7 @@
       :is-open="isDetailOpen"
       :project="selectedProject"
       @close="isDetailOpen = false"
-      @updated="fetchProjects"
+      @updated="fetchEvents"
     />
   </div>
 </template>
@@ -74,10 +74,11 @@ import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../lib/supabaseClient'
 import ProjectDetail from '../components/ProjectDetail.vue'
 
-const projects = ref([])
+const events = ref([])
 const loading = ref(true)
 const isDetailOpen = ref(false)
 const selectedProject = ref(null)
+const zoomMeetings = ref([])
 
 const today = new Date()
 const currentYear = ref(today.getFullYear())
@@ -98,21 +99,92 @@ const nextMonth = () => {
   else currentMonth.value++
 }
 
-const fetchProjects = async () => {
+const fetchEvents = async () => {
   try {
     loading.value = true
-    const { data, error } = await supabase
+    const allEvents = []
+
+    // Fetch projects with due dates and other important dates
+    const { data: projects } = await supabase
       .from('projects')
-      .select('id, title, due_date, pipeline_stage, client_id, client:clients(name)')
-      .not('due_date', 'is', null)
+      .select('id, title, due_date, sow_sent_date, sow_signed_date, pipeline_stage, client_id, client:clients(name)')
       .order('due_date', { ascending: true })
-    if (error) throw error
-    projects.value = (data || []).map(p => {
-      const client = /** @type {any} */ (p.client)
-      return { ...p, client_name: (Array.isArray(client) ? client[0]?.name : client?.name) || '' }
-    })
+
+    if (projects) {
+      for (const p of projects) {
+        const client = /** @type {any} */ (p.client)
+        const clientName = (Array.isArray(client) ? client[0]?.name : client?.name) || ''
+
+        // Due date event
+        if (p.due_date) {
+          allEvents.push({
+            id: `proj-due-${p.id}`,
+            type: 'project',
+            date: p.due_date,
+            title: `${p.title} (Due)`,
+            label: `📋 ${p.title}`,
+            stage: p.pipeline_stage,
+            projectId: p.id,
+            clientName,
+            originalData: p
+          })
+        }
+
+        // SOW Sent date
+        if (p.sow_sent_date) {
+          allEvents.push({
+            id: `proj-sow-sent-${p.id}`,
+            type: 'project',
+            date: p.sow_sent_date,
+            title: `${p.title} (SOW Sent)`,
+            label: `📄 ${p.title} SOW`,
+            stage: p.pipeline_stage,
+            projectId: p.id,
+            clientName
+          })
+        }
+
+        // SOW Signed date
+        if (p.sow_signed_date) {
+          allEvents.push({
+            id: `proj-sow-signed-${p.id}`,
+            type: 'project',
+            date: p.sow_signed_date,
+            title: `${p.title} (SOW Signed)`,
+            label: `✅ ${p.title} SOW`,
+            stage: p.pipeline_stage,
+            projectId: p.id,
+            clientName
+          })
+        }
+      }
+    }
+
+    // Fetch zoom meetings
+    const { data: zooms } = await supabase
+      .from('zoom_meetings')
+      .select('id, meeting_title, scheduled_date, project_id, client_id')
+      .not('scheduled_date', 'is', null)
+      .order('scheduled_date', { ascending: true })
+
+    if (zooms) {
+      for (const zoom of zooms) {
+        allEvents.push({
+          id: `zoom-${zoom.id}`,
+          type: 'zoom',
+          date: zoom.scheduled_date,
+          title: zoom.meeting_title || 'Zoom Meeting',
+          label: `📹 ${zoom.meeting_title || 'Zoom'}`,
+          projectId: zoom.project_id,
+          clientId: zoom.client_id,
+          originalData: zoom
+        })
+      }
+    }
+
+    events.value = allEvents
   } catch (e) {
-    console.error(e)
+    console.error('Error fetching calendar events:', e)
   } finally {
     loading.value = false
   }
@@ -131,33 +203,38 @@ const calendarCells = computed(() => {
   for (let i = firstDay - 1; i >= 0; i--) {
     const day = daysInPrevMonth - i
     const date = new Date(year, month - 1, day)
-    cells.push({ key: `prev-${day}`, day, isCurrentMonth: false, isToday: false, date, projects: getProjectsForDate(date) })
+    cells.push({ key: `prev-${day}`, day, isCurrentMonth: false, isToday: false, date, events: getEventsForDate(date) })
   }
 
   // Current month
   const todayStr = today.toDateString()
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(year, month, d)
-    cells.push({ key: `cur-${d}`, day: d, isCurrentMonth: true, isToday: date.toDateString() === todayStr, date, projects: getProjectsForDate(date) })
+    cells.push({ key: `cur-${d}`, day: d, isCurrentMonth: true, isToday: date.toDateString() === todayStr, date, events: getEventsForDate(date) })
   }
 
   // Next month padding to fill grid
   const remaining = 42 - cells.length
   for (let d = 1; d <= remaining; d++) {
     const date = new Date(year, month + 1, d)
-    cells.push({ key: `next-${d}`, day: d, isCurrentMonth: false, isToday: false, date, projects: getProjectsForDate(date) })
+    cells.push({ key: `next-${d}`, day: d, isCurrentMonth: false, isToday: false, date, events: getEventsForDate(date) })
   }
 
   return cells
 })
 
-const getProjectsForDate = (date) => {
+const getEventsForDate = (date) => {
   const dateStr = date.toISOString().split('T')[0]
-  return projects.value.filter(p => p.due_date?.split('T')[0] === dateStr)
+  return events.value.filter(evt => evt.date?.split('T')[0] === dateStr)
 }
 
-const getProjectPillStyle = (stage) => {
+const getEventPillStyle = (evt) => {
+  if (evt.type === 'zoom') {
+    return 'background: var(--info-soft); color: var(--info);'
+  }
+  // Project event - color by stage
   const base = 'background: var(--ink); color: var(--paper);'
+  const stage = evt.stage
   if (stage === 'Project Complete' || stage === 'Contracts Signed' || stage === 'Invoice Paid')
     return 'background: var(--positive-soft); color: var(--positive);'
   if (stage === 'Proposal Sent' || stage === 'Call Booked')
@@ -169,11 +246,11 @@ const getProjectPillStyle = (stage) => {
   return base
 }
 
-const openProject = async (proj) => {
+const openProject = async (evt) => {
   const { data } = await supabase
     .from('projects')
     .select('*, client:clients(*)')
-    .eq('id', proj.id)
+    .eq('id', evt.projectId)
     .single()
   if (data) {
     selectedProject.value = data
@@ -181,5 +258,10 @@ const openProject = async (proj) => {
   }
 }
 
-onMounted(fetchProjects)
+const openZoom = (evt) => {
+  // For now, just log. Can be extended to open zoom details
+  console.log('Opening zoom meeting:', evt.originalData)
+}
+
+onMounted(fetchEvents)
 </script>

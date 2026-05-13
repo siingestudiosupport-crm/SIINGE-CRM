@@ -45,7 +45,7 @@ export const sendSignedDocumentEmail = async (clientEmail, clientName, documentT
           subject: `Your Signed ${docTitle}`,
           html: emailHtml,
           client_id: clientName,
-          doc_type: 'signed_document'
+          doc_type: isSOW ? 'signed_sow' : 'signed_nda'
         }),
       }
     )

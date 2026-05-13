@@ -50,13 +50,9 @@ export const checkTokenValid = async (token, clientId, documentType, projectId =
       return { valid: false, error: 'Token has expired' }
     }
 
-    // Check if already used
-    if (data.is_used) {
-      return { valid: false, error: 'Token has already been used' }
-    }
 
-    // Validate project ID if SOW
-    if (documentType === 'sow' && projectId && data.project_id !== projectId) {
+    // Validate project ID if SOW and projectId is provided in URL
+    if (documentType === 'sow' && projectId && data.project_id && data.project_id !== projectId) {
       return { valid: false, error: 'Token does not match this project' }
     }
 

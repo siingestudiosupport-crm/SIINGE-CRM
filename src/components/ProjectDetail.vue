@@ -137,8 +137,16 @@
             </label>
           </section>
 
-          <section v-if="localEdits.pipeline_stage === 'Churn'" class="p-5 animate-fade-in" style="background: var(--critical-soft); border: 1px solid var(--critical); border-radius: 4px;">
-            <div class="flex items-center gap-2 mb-3">
+          <section v-if="localEdits.pipeline_stage === 'Request Review'" class="animate-fade-in" style="background: var(--positive-soft); border: 1px solid #B8C4A0; border-radius: 4px; padding: 14px 16px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--positive)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8m3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5m-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11m3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>
+              <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: var(--positive);">Review request added to follow-ups</span>
+            </div>
+            <p style="font-size: 11px; color: var(--positive); margin: 8px 0 0; font-style: italic; line-height: 1.4;">The client will receive a follow-up request to review the project.</p>
+          </section>
+
+          <section v-if="localEdits.pipeline_stage === 'Churn'" class="p-5 animate-fade-in space-y-3" style="background: var(--critical-soft); border: 1px solid var(--critical); border-radius: 4px;">
+            <div class="flex items-center gap-2">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--critical)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
               <label style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--critical);">Reason for Loss (Required)</label>
             </div>
@@ -151,6 +159,7 @@
               <option value="Project cancelled">Project cancelled</option>
               <option value="Other">Other</option>
             </select>
+            <textarea v-if="localEdits.loss_reason" v-model="localEdits.loss_reason_notes" rows="3" placeholder="Add notes about why this deal was lost..." style="width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--critical); border-radius: 4px; font-family: var(--font-sans); font-size: 12px; color: var(--ink); background: white; outline: none; resize: vertical; line-height: 1.5;" @focus="e=>e.target.style.borderColor='var(--critical)'" @blur="e=>e.target.style.borderColor='var(--critical)'"></textarea>
           </section>
 
           <section class="grid grid-cols-2 gap-4">
@@ -227,11 +236,12 @@
               <!-- $ Paid / $ Owed -->
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                 <div>
-                  <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: var(--ink-3); margin-bottom: 5px;">$ Paid</label>
+                  <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: var(--ink-3); margin-bottom: 5px;">$ Paid (Total)</label>
                   <div style="display: flex; align-items: center; border: 1px solid var(--ink-5); border-radius: 2px; padding: 0 10px;" @focusin="e=>e.currentTarget.style.borderColor='var(--ink)'" @focusout="e=>e.currentTarget.style.borderColor='var(--ink-5)'">
                     <span style="color: var(--ink-4); font-size: 13px; margin-right: 4px; font-weight: 700;">$</span>
-                    <input v-model="localEdits.amount_paid" type="number" min="0" step="0.01" placeholder="0" style="flex: 1; border: none; background: transparent; padding: 8px 0; font-family: var(--font-sans); font-size: 13px; color: var(--ink); outline: none; font-weight: 700;" />
+                    <input v-model="localEdits.amount_paid" type="number" min="0" step="0.01" placeholder="0" style="flex: 1; border: none; background: transparent; padding: 8px 0; font-family: var(--font-sans); font-size: 13px; color: var(--ink); outline: none; font-weight: 700;" readonly />
                   </div>
+                  <p style="font-size: 10px; color: var(--ink-5); margin: 4px 0 0; font-style: italic;">Auto-calculated from payment records</p>
                 </div>
                 <div>
                   <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: var(--ink-3); margin-bottom: 5px;">$ Owed</label>
@@ -239,6 +249,39 @@
                     <span style="color: var(--ink-4); font-size: 13px; margin-right: 4px; font-weight: 700;">$</span>
                     <input v-model="localEdits.amount_owed" type="number" min="0" step="0.01" placeholder="0" style="flex: 1; border: none; background: transparent; padding: 8px 0; font-family: var(--font-sans); font-size: 13px; color: var(--ink); outline: none; font-weight: 700;" />
                   </div>
+                </div>
+              </div>
+
+              <!-- Payment Records History -->
+              <div style="border-top: 1px solid var(--bone-edge); padding-top: 14px; margin-top: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                  <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3);">Payment Records</label>
+                  <button
+                    @click="addPaymentRecord"
+                    style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; padding: 5px 10px; background: var(--ink); color: var(--paper); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer; transition: opacity 120ms;"
+                  >+ Add Payment</button>
+                </div>
+                <div v-if="localEdits.payment_records && localEdits.payment_records.length > 0" style="display: flex; flex-direction: column; gap: 10px;">
+                  <div v-for="(record, idx) in localEdits.payment_records" :key="idx" style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 2px; padding: 12px; display: grid; grid-template-columns: 1fr 1fr 40px; gap: 10px; align-items: end;">
+                    <div>
+                      <label style="display: block; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-3); margin-bottom: 4px;">Amount</label>
+                      <div style="display: flex; align-items: center; border: 1px solid var(--ink-5); border-radius: 2px; padding: 0 8px;">
+                        <span style="color: var(--ink-4); font-size: 12px; font-weight: 700;">$</span>
+                        <input v-model.number="record.amount" type="number" min="0" step="0.01" placeholder="0" style="flex: 1; border: none; background: transparent; padding: 6px 0; font-family: var(--font-sans); font-size: 12px; color: var(--ink); outline: none; font-weight: 700;" @change="recalculateTotalPaid" />
+                      </div>
+                    </div>
+                    <div>
+                      <label style="display: block; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-3); margin-bottom: 4px;">Payment Date</label>
+                      <input v-model="record.date" type="date" style="width: 100%; padding: 6px 8px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 12px; color: var(--ink); background: var(--paper); outline: none;" @focus="e => e.target.style.borderColor='var(--ink)'" @blur="e => e.target.style.borderColor='var(--ink-5)'" />
+                    </div>
+                    <button
+                      @click="localEdits.payment_records.splice(idx, 1); recalculateTotalPaid()"
+                      style="padding: 6px 8px; background: transparent; border: 1px solid var(--ember); color: var(--ember); border-radius: 2px; cursor: pointer; font-weight: 700; font-size: 12px; transition: all 120ms;"
+                    >×</button>
+                  </div>
+                </div>
+                <div v-else style="text-align: center; padding: 16px; color: var(--ink-4); font-size: 12px;">
+                  No payment records yet
                 </div>
               </div>
 
@@ -292,40 +335,6 @@
                 <div v-else style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--positive-soft); border: 1px solid #B8C4A0; border-radius: 2px;">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--positive)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                   <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--positive);">Added to Manu Hub</span>
-                </div>
-              </div>
-
-              <!-- DEAL NOT CLOSED -->
-              <div style="border-top: 1px solid var(--bone-edge); padding-top: 14px;">
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 12px;">
-                  <input type="checkbox" v-model="localEdits.deal_not_closed" style="width: 16px; height: 16px; accent-color: var(--ink); cursor: pointer;" />
-                  <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-2);">Deal Not Closed</span>
-                </label>
-
-                <div v-if="localEdits.deal_not_closed" style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 2px; padding: 12px; display: flex; flex-direction: column; gap: 10px;">
-                  <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                      <input type="checkbox" value="Too expensive" v-model="localEdits.deal_not_closed_reasons" style="width: 14px; height: 14px; accent-color: var(--ink);" />
-                      <span style="font-size: 10px; color: var(--ink-2);">Too expensive</span>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                      <input type="checkbox" value="Timeline mismatch" v-model="localEdits.deal_not_closed_reasons" style="width: 14px; height: 14px; accent-color: var(--ink);" />
-                      <span style="font-size: 10px; color: var(--ink-2);">Timeline mismatch</span>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                      <input type="checkbox" value="Not ready" v-model="localEdits.deal_not_closed_reasons" style="width: 14px; height: 14px; accent-color: var(--ink);" />
-                      <span style="font-size: 10px; color: var(--ink-2);">Not ready</span>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                      <input type="checkbox" value="Ghosted" v-model="localEdits.deal_not_closed_reasons" style="width: 14px; height: 14px; accent-color: var(--ink);" />
-                      <span style="font-size: 10px; color: var(--ink-2);">Ghosted</span>
-                    </label>
-                  </div>
-
-                  <div style="border-top: 1px solid var(--bone-edge); padding-top: 10px;">
-                    <label style="display: block; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-3); margin-bottom: 6px;">Notes</label>
-                    <textarea v-model="localEdits.deal_not_closed_notes" rows="3" placeholder="Additional comments..." style="width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 12px; color: var(--ink-2); background: var(--paper); outline: none; resize: vertical; line-height: 1.5;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'"></textarea>
-                  </div>
                 </div>
               </div>
 
@@ -781,14 +790,13 @@ const buildLocalEdits = (p) => {
     sow_fees_payment: p?.sow_fees_payment || defaultFees,
     amount_paid: p?.amount_paid || null,
     amount_owed: p?.amount_owed || null,
+    payment_records: p?.payment_records ? JSON.parse(typeof p.payment_records === 'string' ? p.payment_records : JSON.stringify(p.payment_records)) : [],
     milestones: p?.milestones || '',
     due_date: p?.due_date || '',
     scheduled_date: p?.scheduled_date ? p.scheduled_date.substring(0, 16) : '',
     in_menu_hub: p?.in_menu_hub || false,
     review_requested: p?.review_requested || false,
-    deal_not_closed: p?.deal_not_closed || false,
-    deal_not_closed_reasons: p?.deal_not_closed_reasons ? p.deal_not_closed_reasons.split(',') : [],
-    deal_not_closed_notes: p?.deal_not_closed_notes || '',
+    loss_reason_notes: p?.loss_reason_notes || '',
     snooze_until: p?.snooze_until ? p.snooze_until.substring(0, 10) : '',
     manual_sow_date: '',
     deliverable_trend_analysis: p?.deliverable_trend_analysis || false,
@@ -822,7 +830,7 @@ const localEdits = ref(buildLocalEdits(props.project))
 const stages = [
   'Directory View', 'Intake Form Received', 'Call Booked', 'Proposal Sent',
   'Contracts Signed', 'Invoice Paid', 'Project In Progress', 'Follow Up Needed',
-  'Churn', 'Project Complete', 'Future Project Opp'
+  'Request Review', 'Project Complete', 'Future Project Opp', 'Churn'
 ]
 
 const clientProjects = ref(/** @type {any[]} */ ([]))
@@ -934,12 +942,13 @@ const updateOverview = async () => {
   if (!props.project?.id) return
   isSaving.value = true
   try {
-    const isClosingStage = ['Contracts Signed', 'Invoice Paid', 'Project Complete', 'Churn'].includes(localEdits.value.pipeline_stage)
+    const isClosingStage = ['Contracts Signed', 'Invoice Paid', 'Project Complete', 'Request Review', 'Churn'].includes(localEdits.value.pipeline_stage)
     const updates = {
       pipeline_stage: localEdits.value.pipeline_stage,
       internal_notes: localEdits.value.internal_notes,
       proposal_value: localEdits.value.proposal_value || 0,
       loss_reason: localEdits.value.pipeline_stage === 'Churn' ? localEdits.value.loss_reason : null,
+      loss_reason_notes: localEdits.value.pipeline_stage === 'Churn' ? localEdits.value.loss_reason_notes : null,
       closed_at: isClosingStage ? (props.project.closed_at || new Date().toISOString()) : props.project.closed_at,
       amount_paid: localEdits.value.amount_paid || 0,
       amount_owed: localEdits.value.amount_owed || 0,
@@ -948,9 +957,6 @@ const updateOverview = async () => {
       scheduled_date: localEdits.value.scheduled_date || null,
       in_menu_hub: localEdits.value.in_menu_hub,
       review_requested: localEdits.value.review_requested,
-      deal_not_closed: localEdits.value.deal_not_closed,
-      deal_not_closed_reasons: localEdits.value.deal_not_closed_reasons.join(','),
-      deal_not_closed_notes: localEdits.value.deal_not_closed_notes,
       deliverable_design: localEdits.value.deliverable_design,
       deliverable_design_due: localEdits.value.deliverable_design_due || null,
       deliverable_tech_pack: localEdits.value.deliverable_tech_pack,
@@ -973,10 +979,17 @@ const updateOverview = async () => {
       deliverable_approved_sample_due: localEdits.value.deliverable_approved_sample_due || null,
       deliverable_size_range_due: localEdits.value.deliverable_size_range_due || null,
       deliverable_bulk_due: localEdits.value.deliverable_bulk_due || null,
+      payment_records: localEdits.value.payment_records && localEdits.value.payment_records.length > 0 ? JSON.stringify(localEdits.value.payment_records) : null,
     }
     const { error: updateErr } = await supabase.from('projects').update(updates).eq('id', props.project.id)
     if (updateErr) throw updateErr
-    if (localEdits.value.pipeline_stage === 'Project Complete' && props.project.pipeline_stage !== 'Project Complete') {
+
+    // Add review request to follow-ups when moving to Project Complete or Request Review
+    const oldStage = props.project.pipeline_stage
+    const newStage = localEdits.value.pipeline_stage
+    const shouldQueueReview = (newStage === 'Project Complete' && oldStage !== 'Project Complete') ||
+                               (newStage === 'Request Review' && oldStage !== 'Request Review')
+    if (shouldQueueReview) {
       await supabase.from('email_queue').insert({
         client_id: props.project.client_id,
         client_name: props.project.client?.name || '',
@@ -987,6 +1000,7 @@ const updateOverview = async () => {
         due_at: new Date().toISOString(),
       })
     }
+
     if (props.project.hub_project_id) {
       await hubSupabase.from('projects').update({ crm_stage: localEdits.value.pipeline_stage }).eq('id', props.project.hub_project_id)
     }
@@ -1104,6 +1118,17 @@ const updateClientTier = async () => {
   emit('updated')
 }
 
+const addPaymentRecord = () => {
+  if (!localEdits.value.payment_records) localEdits.value.payment_records = []
+  localEdits.value.payment_records.push({ amount: null, date: new Date().toISOString().substring(0, 10) })
+}
+
+const recalculateTotalPaid = () => {
+  if (!localEdits.value.payment_records) return
+  const total = localEdits.value.payment_records.reduce((sum, record) => sum + (Number(record.amount) || 0), 0)
+  localEdits.value.amount_paid = total
+}
+
 const addToHub = async () => {
   if (!props.project?.id || props.project.hub_project_id) return
   isAddingToHub.value = true
@@ -1116,6 +1141,7 @@ const addToHub = async () => {
       crm_stage: props.project.pipeline_stage || '',
       crm_project_id: props.project.id,
       crm_client_id: props.project.client_id || null,
+      created_at: new Date().toISOString(),
     }])
     if (hubError) throw hubError
     const { error: crmError } = await supabase
@@ -1179,40 +1205,52 @@ const resetDocument = async (type) => {
   emit('updated')
 }
 
+const getCallDateText = () => {
+  if (!props.project?.call_date) return '[date of call]'
+
+  const callDate = new Date(props.project.call_date)
+  const today = new Date()
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+
+  // Normalize dates to compare just the day part
+  const callDateNorm = new Date(callDate.getFullYear(), callDate.getMonth(), callDate.getDate())
+  const todayNorm = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const yesterdayNorm = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate())
+
+  if (callDateNorm.getTime() === todayNorm.getTime()) {
+    return 'today'
+  } else if (callDateNorm.getTime() === yesterdayNorm.getTime()) {
+    return 'yesterday'
+  } else {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    return `on ${days[callDate.getDay()]}`
+  }
+}
+
 const buildEmailData = () => {
   const baseUrl = window.location.origin
   const clientName = props.project.client.name
   const docsText = selectedDocs.value.join(' and ')
   emailData.value.to = props.project.client.email
-  emailData.value.cc = 'sierra@siinge.studio'
   emailData.value.subject = `Document Request: ${docsText} from SIINGE STUDIO`
   const firstName = clientName.split(' ')[0]
-  const callDate = props.project.call_date ? new Date(props.project.call_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) : '[date of call]'
+  const callDateText = getCallDateText()
   const projectName = props.project.title || '[project name]'
 
-  let docsPhrase = ''
-  if (selectedDocs.value.includes('SOW') && selectedDocs.value.includes('NDA')) {
-    docsPhrase = 'the Scope of Work and Mutual NDA'
-  } else if (selectedDocs.value.includes('SOW')) {
-    docsPhrase = 'the Scope of Work'
-  } else if (selectedDocs.value.includes('NDA')) {
-    docsPhrase = 'the Mutual NDA'
-  }
-  const linkWord = selectedDocs.value.length > 1 ? 'links' : 'link'
-
-  emailData.value.messageText = `Hi ${firstName},\n\nIt was great catching up with you on ${callDate} and talking through the details of your project. I put together a structured scope based on everything we discussed so you have a clear picture of how this would move forward.\n\nI've outlined the deliverables, timeline, and how we'll approach development for the ${projectName}.\n\nPlease review and sign ${docsPhrase} by clicking on the ${linkWord} below.\n\nOnce those are complete, I'll send through the invoice and we'll get started!`
+  emailData.value.messageText = `Hi ${firstName},\n\nIt was great catching up with you ${callDateText} and talking through the details of your project. I put together a structured scope based on everything we discussed so you have a clear picture of how this would move forward.\n\nI've outlined the deliverables, timeline, and how we'll approach development for the ${projectName}.\n\nPlease review and sign the Scope of Work by clicking on the link below.\n\n[SIGNATURE_LINKS]\n\nOnce those are complete, I'll send through the invoice and we'll get started!`
 
   let linksHtml = ''
   if (selectedDocs.value.includes('SOW')) {
     const sowLink = `${baseUrl}/portal/${props.project.client_id}/sow/${props.project.id}`
-    linksHtml += `<a href="${sowLink}" style="color: #2563eb; text-decoration: underline;">Review & Sign SOW</a>`
+    linksHtml += `<a href="${sowLink}" style="color: #2563eb; text-decoration: underline; font-weight: 600;">Review and Sign SOW</a>`
   }
   if (selectedDocs.value.includes('NDA')) {
     const ndaLink = `${baseUrl}/portal/${props.project.client_id}/nda`
-    if (linksHtml) linksHtml += ' and '
-    linksHtml += `<a href="${ndaLink}" style="color: #1e293b; text-decoration: underline;">Review & Sign NDA</a>`
+    if (linksHtml) linksHtml += '<br/>'
+    linksHtml += `<a href="${ndaLink}" style="color: #2563eb; text-decoration: underline; font-weight: 600;">Review and Sign NDA</a>`
   }
-  emailData.value.buttonsHtml = linksHtml ? `<p style="font-family:sans-serif;color:#374151;margin:0 0 8px">${linksHtml}</p>` : ''
+  emailData.value.buttonsHtml = linksHtml ? `<p style="font-family:sans-serif;color:#374151;margin:16px 0 0">${linksHtml}</p>` : ''
 }
 
 const saveAndPrepareEmail = async () => {
@@ -1271,16 +1309,19 @@ const dispatchEmail = async () => {
       portalLinks[docType] = generatePortalLink(props.project.client_id, docType, projectId, token)
     }
 
-    // Build email HTML with secure links
-    let emailHtml = emailData.value.messageText.split('\n').map(l => l ? `<p style="font-family:sans-serif;color:#374151;margin:0 0 8px">${l}</p>` : '').join('')
-
-    // Replace placeholder links with secure token links (as inline text)
+    // Build links HTML
+    let linksHtml = ''
     if (selectedDocs.value.includes('SOW') && portalLinks.sow) {
-      emailHtml += `<p style="font-family:sans-serif;margin:16px 0">Please review and sign the Scope of Work by clicking <a href="${portalLinks.sow}" style="color:#2563eb;text-decoration:underline">here</a>.</p>`
+      linksHtml += `<a href="${portalLinks.sow}" style="color:#2563eb;text-decoration:underline;font-weight:600">Review and Sign SOW</a>`
     }
     if (selectedDocs.value.includes('NDA') && portalLinks.nda) {
-      emailHtml += `<p style="font-family:sans-serif;margin:16px 0">Please review and sign the NDA by clicking <a href="${portalLinks.nda}" style="color:#2563eb;text-decoration:underline">here</a>.</p>`
+      if (linksHtml) linksHtml += ' & '
+      linksHtml += `<a href="${portalLinks.nda}" style="color:#2563eb;text-decoration:underline;font-weight:600">Review and Sign NDA</a>`
     }
+
+    // Replace placeholder with actual links before converting to HTML
+    let messageWithLinks = emailData.value.messageText.replace('[SIGNATURE_LINKS]', linksHtml)
+    let emailHtml = messageWithLinks.split('\n').map(l => l ? `<p style="font-family:sans-serif;color:#374151;margin:0 0 8px">${l}</p>` : '').join('')
 
     const { error: emailError } = await supabase.functions.invoke('send-email', {
       body: {
@@ -1318,7 +1359,8 @@ const dispatchEmail = async () => {
       })
     }
 
-    await showAlert('Documents dispatched successfully! CC sent to sierra@siinge.studio', 'Success')
+    const ccMessage = emailData.value.cc ? ` CC sent to ${emailData.value.cc}` : ''
+    await showAlert(`Documents dispatched successfully!${ccMessage}`, 'Success')
     showEmailModal.value = false
     selectedDocs.value = []
     emit('updated')

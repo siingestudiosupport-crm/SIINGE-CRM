@@ -186,19 +186,31 @@ const fetchData = async () => {
   }
 }
 
-// $ Closed: Invoice Paid or Project Complete, filtered by closed_at (or created_at fallback)
+// $ Closed: Sum of payments made in the selected period, filtered by payment_records dates
 const kpiClosed = computed(() => {
   const range = getDateRange()
-  const paid = projects.value.filter(p =>
-    ['Invoice Paid', 'Project Complete'].includes(p.pipeline_stage)
-  )
-  const filtered = range
-    ? paid.filter(p => {
-        const date = new Date(p.closed_at || p.created_at)
-        return date >= range.start && date <= range.end
-      })
-    : paid
-  return filtered.reduce((sum, p) => sum + (Number(p.amount_paid) || 0), 0)
+  if (!range) {
+    return projects.value.reduce((sum, p) => sum + (Number(p.amount_paid) || 0), 0)
+  }
+  let total = 0
+  projects.value.forEach(p => {
+    if (p.payment_records) {
+      try {
+        const records = typeof p.payment_records === 'string' ? JSON.parse(p.payment_records) : p.payment_records
+        records.forEach(record => {
+          if (record.date && record.amount) {
+            const paymentDate = new Date(record.date)
+            if (paymentDate >= range.start && paymentDate <= range.end) {
+              total += Number(record.amount) || 0
+            }
+          }
+        })
+      } catch (e) {
+        // fallback to amount_paid if payment_records is invalid
+      }
+    }
+  })
+  return total
 })
 
 // Active Pipeline: proposal values of Open deals with no payment yet, excluding Churn and those with amount_owed

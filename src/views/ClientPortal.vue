@@ -23,20 +23,25 @@
           <h1 class="text-xl font-bold tracking-wider uppercase">{{ isNDA ? 'NON-DISCLOSURE AGREEMENT' : 'SCOPE OF WORK' }}</h1>
           <p class="text-slate-400 text-sm mt-1">Ref: #{{ client.id.substring(0, 8) }}</p>
         </div>
-        <div class="text-right">
-          <button v-if="isSigned" @click="downloadPDF" :disabled="isGeneratingPDF" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow-md transition-colors">
-            {{ isGeneratingPDF ? 'Preparing File...' : 'Download Signed PDF' }}
-          </button>
+        <div v-if="isSigned" class="text-right">
+          <div class="flex items-center gap-2 text-white bg-green-600 px-4 py-2 rounded-lg">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>
+            <span class="text-sm font-bold">Document Signed</span>
+          </div>
         </div>
       </div>
 
       <div class="px-8 py-8">
-        
-        <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+
+        <div class="mb-6 p-4" :style="isSigned ? 'background: #dcfce7; border: 1px solid #bbf7d0; border-radius: 0.5rem;' : 'background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 0.5rem;'">
           <div class="flex items-center justify-between">
             <div>
-              <h3 class="text-sm font-bold text-blue-800 uppercase tracking-wider">Review Mode</h3>
-              <p class="text-blue-600 text-xs mt-1">The document is read-only. Complete the fields below to update the preview.</p>
+              <h3 v-if="isSigned" class="text-sm font-bold text-green-800 uppercase tracking-wider">✓ Thank You!</h3>
+              <h3 v-else class="text-sm font-bold text-blue-800 uppercase tracking-wider">Review Mode</h3>
+              <p v-if="isSigned" class="text-green-700 text-xs mt-1">Thank you for signing the {{ isNDA ? 'Non-Disclosure Agreement' : 'Scope of Work' }}. A copy of the signed document has been sent to your email for your records.</p>
+              <p v-else class="text-blue-600 text-xs mt-1">The document is read-only. Complete the fields below to update the preview.</p>
             </div>
           </div>
         </div>
@@ -52,10 +57,10 @@
           </div>
         </div>
 
-        <div class="pt-8 border-t border-gray-200">
+        <div v-if="!isSigned" class="pt-8 border-t border-gray-200">
           <h3 class="text-lg font-bold text-gray-900 mb-6">Execution & Signatures</h3>
 
-          <div v-if="!isSigned" class="space-y-6">
+          <div class="space-y-6">
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -101,14 +106,36 @@
               {{ isSubmitting ? 'Securing & Saving to Vault...' : 'I Agree and Sign Document' }}
             </button>
           </div>
+        </div>
 
-          <div v-else class="bg-green-50 p-8 rounded-xl border border-green-200 flex flex-col md:flex-row justify-between items-center">
+        <div v-else class="pt-8 border-t border-gray-200">
+          <div class="bg-green-50 p-8 rounded-xl border border-green-200 flex flex-col md:flex-row justify-between items-center">
             <div>
               <p class="text-green-800 font-bold text-lg">Document Signed & Secured</p>
               <p class="text-green-600 text-sm mt-1">Executed by <span class="font-bold">{{ isNDA ? client.nda_client_name : sowProject?.sow_client_name }}</span></p>
             </div>
             <img v-if="isNDA ? client.nda_signature : sowProject?.sow_signature" :src="isNDA ? client.nda_signature : sowProject.sow_signature" class="h-20 mix-blend-multiply mt-4 md:mt-0" />
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Thank You Modal -->
+    <div v-if="showThankYouModal" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(0,0,0,0.5);">
+      <div class="w-full max-w-md overflow-hidden rounded-xl" style="background: var(--bone); border: 1px solid var(--bone-edge); box-shadow: var(--shadow-3);">
+        <div style="padding: 40px 32px; text-align: center;">
+          <div style="margin-bottom: 20px;">
+            <svg class="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 20 20" style="color: #10b981;">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <h2 style="font-size: 24px; font-weight: bold; color: var(--ink); margin: 0 0 12px;">Thank You!</h2>
+          <p style="font-size: 14px; color: var(--ink-2); margin: 0 0 20px; line-height: 1.6;">
+            Thank you for signing the {{ isNDA ? 'Non-Disclosure Agreement' : 'Scope of Work' }}. A copy of the signed document has been sent to your email for your records.
+          </p>
+          <button @click="showThankYouModal = false" style="font-family: var(--font-sans); font-weight: 700; font-size: 14px; padding: 12px 32px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer;">
+            Close
+          </button>
         </div>
       </div>
     </div>
@@ -121,10 +148,9 @@ import { useRoute } from 'vue-router'
 import { supabase } from '../lib/supabaseClient'
 import { useConfirmModal } from '../composables/useConfirmModal'
 import { PDFDocument, StandardFonts, rgb, PDFRef } from 'pdf-lib'
-import html2pdf from 'html2pdf.js'
-import { generateSOWHTML } from '../utils/sowTemplate'
+import { getSOWPdfBlob, getSOWPdfDataUrl } from '../utils/sowPdfmake'
 import { checkRateLimit } from '../utils/portalRateLimit'
-import { checkTokenValid, markTokenAsUsed } from '../utils/portalTokens'
+import { checkTokenValid } from '../utils/portalTokens'
 import { checkBackendRateLimit, logPortalAccess, isKnownScraper } from '../utils/backendRateLimit'
 import { sendSignedDocumentEmail } from '../utils/sendSignedDocument'
 
@@ -141,6 +167,7 @@ const tokenError = ref(null)
 
 const form = ref({ company_name: '', full_address: '', business_name: '', client_name: '', client_title: '' })
 const sigCanvas = ref(null); const ctx = ref(null); const isDrawing = ref(false); const hasDrawn = ref(false)
+const showThankYouModal = ref(false)
 
 const isNDA = computed(() => route.params.documentType === 'nda')
 const isSOW = computed(() => route.params.documentType === 'sow')
@@ -194,9 +221,6 @@ const fetchDocument = async () => {
       return
     }
 
-    // Mark token as used on first load
-    await markTokenAsUsed(token)
-
     tokenValid.value = true
 
     // Client-side rate limiting
@@ -220,30 +244,27 @@ const fetchDocument = async () => {
     // Log successful access
     await logPortalAccess(route.params.clientId, route.params.documentType, 200)
 
-    const { data } = await supabase.from('clients').select('*').eq('id', route.params.clientId).single()
+    console.log('[fetchDocument] Fetching client data')
+    const { data, error: clientError } = await supabase.from('clients').select('*').eq('id', route.params.clientId).single()
+    if (clientError) throw new Error(`Failed to fetch client: ${clientError.message}`)
     client.value = data
+    console.log('[fetchDocument] Client loaded:', client.value?.id)
 
     // For SOW: fetch the specific project so each project has its own SOW
     if (isSOW.value && route.params.projectId) {
-      const { data: projData } = await supabase.from('projects').select('*').eq('id', route.params.projectId).single()
+      console.log('[fetchDocument] Fetching SOW project:', route.params.projectId)
+      const { data: projData, error: projError } = await supabase.from('projects').select('*').eq('id', route.params.projectId).single()
+      if (projError) throw new Error(`Failed to fetch project: ${projError.message}`)
       sowProject.value = projData
+      console.log('[fetchDocument] Project loaded:', sowProject.value?.id)
     }
 
     if (data) {
-      if (isSigned.value) {
-        const src = isNDA.value ? data : (sowProject.value || data)
-        form.value.company_name = data.company || ''
-        form.value.client_name = isNDA.value ? (data.nda_client_name || '') : (src.sow_client_name || '')
-        form.value.client_title = isNDA.value ? (data.nda_client_title || '') : (src.sow_client_title || '')
-        form.value.full_address = src.full_address || data.full_address || ''
-        form.value.business_name = src.business_name || data.business_name || ''
-      } else {
-        form.value.company_name = ''
-        form.value.client_name = ''
-        form.value.client_title = ''
-        form.value.full_address = ''
-        form.value.business_name = ''
-      }
+      form.value.company_name = ''
+      form.value.client_name = ''
+      form.value.client_title = ''
+      form.value.full_address = ''
+      form.value.business_name = ''
 
       // Tracking: opened_at
       if (!isSigned.value) {
@@ -255,9 +276,12 @@ const fetchDocument = async () => {
       }
     }
 
+    console.log('[fetchDocument] About to generate PDF preview')
     await generateLivePDFPreview()
+    console.log('[fetchDocument] PDF preview generated successfully')
   } catch (error) {
-    console.error(error)
+    console.error('[fetchDocument] Error:', error)
+    tokenError.value = `Failed to load document: ${error.message}`
   } finally {
     loading.value = false
   }
@@ -266,50 +290,55 @@ const fetchDocument = async () => {
 const buildPDF = async (forDownload = false, flattenPdf = false) => {
   const p = client.value
 
-  // === SOW: Generate from HTML template ===
+  // === SOW: Generate with pdfmake ===
   if (isSOW.value) {
-    const proj = sowProject.value || p
+    try {
+      const proj = sowProject.value || p
+      if (!proj) throw new Error('Project data not available')
 
-    const studioSignatureBase64 = await fetch('/signature.png')
-      .then(r => r.blob())
-      .then(b => new Promise(resolve => {
-        const reader = new FileReader()
-        reader.onloadend = () => resolve(reader.result.split(',')[1])
-        reader.readAsDataURL(b)
-      }))
-      .catch(() => null)
+      const studioSignatureBase64 = await fetch('/signature.png')
+        .then(r => r.blob())
+        .then(b => new Promise(resolve => {
+          const reader = new FileReader()
+          reader.onloadend = () => resolve(reader.result.split(',')[1])
+          reader.readAsDataURL(b)
+        }))
+        .catch(() => null)
 
-    const htmlContent = generateSOWHTML({
-      date_1: formatDate(proj.sow_sent_date),
-      date_2: formatDate(proj.sow_signed_date),
-      date_3: formatDate(proj.sow_sent_date),
-      company_name: form.value.company_name,
-      full_address: form.value.full_address,
-      business_name: form.value.company_name,
-      client_name: form.value.client_name,
-      client_title: form.value.client_title,
-      deliverables: proj.sow_deliverables,
-      timeline: proj.sow_timeline,
-      fees_payment: proj.sow_fees_payment,
-      signatureImageBase64: forDownload && proj.sow_signature ? proj.sow_signature.split(',')[1] : null,
-      studioSignatureBase64,
-    })
+      // Determine which signature to show:
+      // - After signing: use saved signature from database
+      // - Before signing (preview): use canvas if drawn
+      // - For download: use saved signature if available
+      let clientSig = null
+      if (proj.sow_signature) {
+        // Use saved signature (for both preview after signing and download)
+        clientSig = proj.sow_signature.split(',')[1]
+      } else if (!forDownload && hasDrawn.value) {
+        // Preview before signing: use canvas signature if drawn
+        clientSig = sigCanvas.value.toDataURL('image/png').split(',')[1]
+      }
 
-    const element = document.createElement('div')
-    element.innerHTML = htmlContent
-
-    const pdfArrayBuffer = await html2pdf()
-      .set({
-        margin: 0,
-        filename: `SOW_${form.value.company_name}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      const blob = await getSOWPdfBlob({
+        date_1: formatDate(proj.sow_sent_date),
+        date_2: formatDate(proj.sow_signed_date || (proj.sow_status === 'Signed' ? new Date().toISOString() : '')),
+        date_3: formatDate(proj.sow_signed_date || (proj.sow_status === 'Signed' ? new Date().toISOString() : '')),
+        company_name: form.value.company_name,
+        full_address: form.value.full_address,
+        business_name: form.value.company_name,
+        client_name: form.value.client_name,
+        client_title: form.value.client_title,
+        deliverables: proj.sow_deliverables,
+        timeline: proj.sow_timeline,
+        fees_payment: proj.sow_fees_payment,
+        signatureImageBase64: clientSig,
+        studioSignatureBase64,
       })
-      .from(element)
-      .outputPdf('arraybuffer')
 
-    return new Uint8Array(pdfArrayBuffer)
+      return new Uint8Array(await blob.arrayBuffer())
+    } catch (error) {
+      console.error('[buildPDF] SOW generation error:', error)
+      throw error
+    }
   }
 
   // === NDA: Use PDF template (existing logic) ===
@@ -329,8 +358,8 @@ const buildPDF = async (forDownload = false, flattenPdf = false) => {
   fillField('company_name', form.value.company_name)
   fillField('client_name', form.value.client_name)
   fillField('client_title', form.value.client_title)
-  fillField('date_2', formatDate(p.nda_signed_date))
-  fillField('date_3', formatDate(p.nda_sent_date))
+  fillField('date_2', formatDate(p.nda_signed_date || (p.nda_status === 'Signed' ? new Date().toISOString() : '')))
+  fillField('date_3', formatDate(p.nda_signed_date || (p.nda_status === 'Signed' ? new Date().toISOString() : '')))
 
   if (forDownload && p.nda_signature) {
     try {
@@ -352,7 +381,8 @@ const generateLivePDFPreview = async () => {
     if (pdfPreviewUrl.value) URL.revokeObjectURL(pdfPreviewUrl.value)
     pdfPreviewUrl.value = URL.createObjectURL(blob)
   } catch (error) {
-    console.error("Error loading PDF Preview", error)
+    console.error("[PDF Preview] Error:", error)
+    tokenError.value = `PDF generation failed: ${error.message}`
   }
 }
 
@@ -386,6 +416,25 @@ watch(sigCanvas, (canvas) => {
   if (canvas) initCanvas()
 })
 
+// Update preview only when signature is drawn or after signing (not on form changes to avoid flashing)
+watch(() => hasDrawn.value, async () => {
+  if (!tokenValid.value || !client.value) return
+  try {
+    await generateLivePDFPreview()
+  } catch (error) {
+    console.error('[updatePreview] Error:', error)
+  }
+})
+
+watch(() => sowProject.value?.sow_signature, async () => {
+  if (!tokenValid.value || !client.value) return
+  try {
+    await generateLivePDFPreview()
+  } catch (error) {
+    console.error('[updatePreview] Error:', error)
+  }
+})
+
 
 const submitDocument = async () => {
   if (isSubmitting.value) return
@@ -395,17 +444,22 @@ const submitDocument = async () => {
     
     const sig64 = sigCanvas.value.toDataURL('image/png')
     const d = new Date().toISOString()
-    
-    if (isNDA.value) client.value.nda_signature = sig64
-    else if (sowProject.value) sowProject.value.sow_signature = sig64
+
+    if (isNDA.value) {
+      client.value.nda_signature = sig64
+      client.value.nda_signed_date = d
+    } else if (sowProject.value) {
+      sowProject.value.sow_signature = sig64
+      sowProject.value.sow_signed_date = d
+    }
 
     console.log("Generando PDF con pdf-lib...");
     const pdfBytes = await buildPDF(true)
     const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' })
-    
+
     const cleanCompanyName = form.value.company_name.replace(/[^a-z0-9]/gi, '_')
-    const fileName = `${isNDA.value ? 'NDA' : 'SOW'}_Signed_${cleanCompanyName}.pdf`
-    const filePath = `${route.params.clientId}/${Date.now()}_${fileName}`
+    const fileName = `${cleanCompanyName}_${Date.now()}_${isNDA.value ? 'NDA' : 'SOW'}_Signed.pdf`
+    const filePath = `${cleanCompanyName}/${fileName}`
 
     console.log("Intentando subir archivo a Storage en la ruta:", filePath);
 
@@ -499,6 +553,7 @@ const submitDocument = async () => {
     }
 
     console.log("Todo completado con éxito.");
+    showThankYouModal.value = true
     await generateLivePDFPreview()
   } catch (error) {
     console.error("FALLO GENERAL:", error);
