@@ -2,22 +2,30 @@ import { supabase } from '../lib/supabaseClient'
 
 export const sendSignedDocumentEmail = async (clientEmail, clientName, documentType, filePath, projectTitle = '') => {
   try {
+    console.log('[sendSignedDocumentEmail] Starting with:', { clientEmail, clientName, documentType, filePath })
+
     // Prepare email content
     const isSOW = documentType === 'sow'
     const docTitle = isSOW ? 'Scope of Work' : 'Non-Disclosure Agreement'
 
     // Create signed URL valid for 30 days (2592000 seconds)
+    console.log('[sendSignedDocumentEmail] Creating signed URL for:', filePath)
     const { data, error: urlError } = await supabase.storage
       .from('contracts')
       .createSignedUrl(filePath, 2592000)
 
     if (urlError || !data?.signedUrl) {
+      console.error('[sendSignedDocumentEmail] Failed to create signed URL:', urlError)
       throw new Error(`Failed to generate download link: ${urlError?.message || 'Unknown error'}`)
     }
+
+    console.log('[sendSignedDocumentEmail] Signed URL created successfully')
 
     // Pass filename to download parameter so browser saves with correct name
     const downloadFilename = `${docTitle.replace(/\s+/g, '_')}_Signed_${clientName.replace(/[^a-z0-9]/gi, '_')}.pdf`
     const downloadUrl = `${data.signedUrl}&download=${encodeURIComponent(downloadFilename)}`
+
+    console.log('[sendSignedDocumentEmail] Sending email to:', clientEmail)
 
     const emailHtml = `
       <p>Hi ${clientName},</p>
@@ -25,13 +33,10 @@ export const sendSignedDocumentEmail = async (clientEmail, clientName, documentT
       <p>Thank you for reviewing and signing the <strong>${docTitle}</strong> ${isSOW ? `for ${projectTitle}` : ''}. Your signed copy is ready to download <a href="${downloadUrl}">here</a>.</p>
 
       <p>The link will be valid for 30 days. If you have any questions or need a copy after that expires, please don't hesitate to reach out.</p>
-
-      <p>Best regards,<br/>
-      <strong>Sierra</strong><br/>
-      SIINGE STUDIO</p>
     `
 
-    // Call Supabase Edge Function
+    // Call Supabase Edge Function with unique identifier to prevent deduplication
+    const uniqueId = `${documentType}_${Date.now()}_${Math.random().toString(36).substring(7)}`
     const response = await fetch(
       `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email`,
       {
@@ -45,19 +50,22 @@ export const sendSignedDocumentEmail = async (clientEmail, clientName, documentT
           subject: `Your Signed ${docTitle}`,
           html: emailHtml,
           client_id: clientName,
-          doc_type: isSOW ? 'signed_sow' : 'signed_nda'
+          doc_type: isSOW ? 'signed_sow' : 'signed_nda',
+          idempotency_key: uniqueId
         }),
       }
     )
 
     if (!response.ok) {
       const error = await response.json()
+      console.error('[sendSignedDocumentEmail] Response not OK:', response.status, error)
       throw new Error(`Email send failed: ${error.error}`)
     }
 
+    console.log('[sendSignedDocumentEmail] Email sent successfully to:', clientEmail)
     return { success: true, error: null }
   } catch (err) {
-    console.error('Error sending signed document email:', err)
+    console.error('[sendSignedDocumentEmail] Error:', err.message)
     return { success: false, error: err.message }
   }
 }

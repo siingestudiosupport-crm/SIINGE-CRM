@@ -940,6 +940,17 @@ const formatDate = (iso) => iso ? new Date(iso).toLocaleString('en-US', { month:
 
 const updateOverview = async () => {
   if (!props.project?.id) return
+
+  // Every payment with an amount must have a valid date, otherwise it would
+  // be untrackable in the dashboard's time-based reporting.
+  const invalidPayment = (localEdits.value.payment_records || []).some(
+    r => Number(r.amount) > 0 && (!r.date || !/^\d{4}-\d{2}-\d{2}$/.test(r.date))
+  )
+  if (invalidPayment) {
+    await showAlert('Every payment with an amount must have a date. Please complete the missing payment dates before saving.', 'Missing Payment Date')
+    return
+  }
+
   isSaving.value = true
   try {
     const isClosingStage = ['Contracts Signed', 'Invoice Paid', 'Project Complete', 'Request Review', 'Churn'].includes(localEdits.value.pipeline_stage)
@@ -1118,9 +1129,14 @@ const updateClientTier = async () => {
   emit('updated')
 }
 
+const todayLocalISO = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 const addPaymentRecord = () => {
   if (!localEdits.value.payment_records) localEdits.value.payment_records = []
-  localEdits.value.payment_records.push({ amount: null, date: new Date().toISOString().substring(0, 10) })
+  localEdits.value.payment_records.push({ amount: null, date: todayLocalISO() })
 }
 
 const recalculateTotalPaid = () => {
@@ -1197,7 +1213,16 @@ const resetDocument = async (type) => {
   })
   if (!confirmed) return
   if (type === 'NDA') {
-    await supabase.from('clients').update({ nda_status: null, nda_sent_date: null, nda_opened_at: null }).eq('id', props.project.client_id)
+    await supabase.from('clients').update({
+      nda_status: null,
+      nda_sent_date: null,
+      nda_opened_at: null,
+      nda_signed_date: null,
+      nda_signature: null,
+      nda_client_name: null,
+      nda_client_title: null,
+      nda_pdf_path: null
+    }).eq('id', props.project.client_id)
   } else if (type === 'SOW' && props.project?.id) {
     await supabase.from('projects').update({ sow_status: null, sow_sent_date: null, sow_signed_date: null, sow_pdf_path: null, sow_opened_at: null, sow_signature: null, sow_client_name: null, sow_client_title: null }).eq('id', props.project.id)
   }
@@ -1405,11 +1430,8 @@ const markSowSentManually = async () => {
   if (!localEdits.value.manual_sow_date || !props.project?.client_id || !props.project?.id) return
   const sentDate = new Date(localEdits.value.manual_sow_date).toISOString()
   try {
-    await supabase.from('clients')
-      .update({ sow_status: 'Sent', sow_sent_date: sentDate })
-      .eq('id', props.project.client_id)
     await supabase.from('projects')
-      .update({ sow_sent_date: sentDate })
+      .update({ sow_status: 'Sent', sow_sent_date: sentDate })
       .eq('id', props.project.id)
     await supabase.from('activity_logs').insert({
       event_type:    'sow_sent',

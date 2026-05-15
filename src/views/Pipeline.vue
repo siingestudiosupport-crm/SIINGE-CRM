@@ -158,9 +158,10 @@ const STAGES = [
   'Invoice Paid',
   'Project In Progress',
   'Follow Up Needed',
-  'Churn',
+  'Request Review',
   'Project Complete',
-  'Future Project Opp'
+  'Future Project Opp',
+  'Churn'
 ]
 
 const projects = ref([])
@@ -180,9 +181,10 @@ const getStageHeaderStyle = (stage) => {
     'Invoice Paid':         'border-top: 2px solid var(--positive);',
     'Project In Progress':  'border-top: 2px solid var(--info);',
     'Follow Up Needed':     'border-top: 2px solid var(--ember);',
-    'Churn':                'border-top: 2px solid var(--critical);',
+    'Request Review':       'border-top: 2px solid var(--positive);',
     'Project Complete':     'border-top: 2px solid var(--ink);',
     'Future Project Opp':   'border-top: 2px solid var(--ink-3);',
+    'Churn':                'border-top: 2px solid var(--critical);',
   }
   return map[stage] || 'border-top: 2px solid var(--ink-5);'
 }

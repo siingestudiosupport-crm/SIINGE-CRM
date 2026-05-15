@@ -32,6 +32,15 @@ const buildDocDefinition = (data) => {
     pageMargins: [54, 54, 54, 54],
     defaultStyle: { font: 'Roboto', fontSize: 11, lineHeight: 1.5 },
     styles,
+    header: function(currentPage, pageCount) {
+      return {
+        text: `Page ${currentPage} of ${pageCount}`,
+        alignment: 'right',
+        fontSize: 10,
+        color: '#666666',
+        margin: [0, 10, 20, 0]
+      }
+    },
     content: [
       { text: 'SCOPE OF WORK AGREEMENT', style: 'title' },
 

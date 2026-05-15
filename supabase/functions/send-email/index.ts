@@ -135,7 +135,7 @@ serve(async (req: Request) => {
     }
 
     // Recibimos client_id y doc_type desde el Frontend para el tracking
-    const { to, subject, html, client_id, doc_type, queue_item_id, attachments } = await req.json()
+    const { to, subject, html, cc, client_id, doc_type, queue_item_id, attachments } = await req.json()
 
     // Unimos el mensaje original del CRM con la firma HTML
     const finalHtml = `
@@ -155,8 +155,11 @@ serve(async (req: Request) => {
       body: JSON.stringify({
         from: 'Sierra | SIINGE STUDIO <sierra@siinge.studio>',
         to: [to],
-        // Follow-ups are covered by the daily digest — skip CC to avoid flooding
-        ...(doc_type !== 'followup' ? { cc: ['sierra@siinge.studio'] } : {}),
+        // CC respects what the frontend sends. Empty/missing → no CC.
+        // Follow-ups are covered by the daily digest, so they intentionally pass no cc.
+        ...(cc && (Array.isArray(cc) ? cc.length > 0 : cc.trim().length > 0)
+          ? { cc: Array.isArray(cc) ? cc : [cc] }
+          : {}),
         subject: subject,
         html: finalHtml,
         // Include attachments if provided

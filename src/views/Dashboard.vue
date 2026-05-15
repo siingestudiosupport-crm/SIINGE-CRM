@@ -44,28 +44,37 @@
             <span style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-4); background: var(--paper-2); border: 1px solid var(--ink-5); border-radius: 2px; padding: 2px 5px;">{{ currentFilterLabel }}</span>
           </div>
           <p style="font-family: var(--font-display); font-style: italic; font-size: 40px; font-weight: 400; color: var(--positive); margin: 0 0 6px; line-height: 1; letter-spacing: -0.02em;">${{ kpiClosed.toLocaleString() }}</p>
-          <p style="font-size: 11px; color: var(--ink-4); margin: 0;">Total paid on Invoice Paid &amp; Complete projects.</p>
+          <p style="font-size: 11px; color: var(--ink-4); margin: 0;">Sum of payment records dated within the selected period.</p>
         </div>
 
         <!-- Active Pipeline Value -->
         <div style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; padding: 24px;">
-          <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0 0 10px;">Active Pipeline Value</p>
+          <div class="flex justify-between items-start" style="margin-bottom: 10px;">
+            <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0;">Active Pipeline Value</p>
+            <span style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-4); background: var(--paper-2); border: 1px solid var(--ink-5); border-radius: 2px; padding: 2px 5px;">Current</span>
+          </div>
           <p style="font-family: var(--font-display); font-style: italic; font-size: 40px; font-weight: 400; color: var(--ink); margin: 0 0 6px; line-height: 1; letter-spacing: -0.02em;">${{ kpiActivePipeline.toLocaleString() }}</p>
-          <p style="font-size: 11px; color: var(--ink-4); margin: 0;">Open deals with no payment yet, excluding Churn.</p>
+          <p style="font-size: 11px; color: var(--ink-4); margin: 0;">Proposal value of in-flight deals (no payment, not closed or parked).</p>
         </div>
 
         <!-- Expected Income -->
         <div style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; padding: 24px;">
-          <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0 0 10px;">Expected Income</p>
+          <div class="flex justify-between items-start" style="margin-bottom: 10px;">
+            <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0;">Expected Income</p>
+            <span style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-4); background: var(--paper-2); border: 1px solid var(--ink-5); border-radius: 2px; padding: 2px 5px;">Current</span>
+          </div>
           <p style="font-family: var(--font-display); font-style: italic; font-size: 40px; font-weight: 400; color: var(--caution); margin: 0 0 6px; line-height: 1; letter-spacing: -0.02em;">${{ kpiExpectedIncome.toLocaleString() }}</p>
-          <p style="font-size: 11px; color: var(--ink-4); margin: 0;">Sum of all outstanding amounts owed.</p>
+          <p style="font-size: 11px; color: var(--ink-4); margin: 0;">Outstanding amounts owed across non-Churn projects.</p>
         </div>
 
         <!-- Avg Client LTV -->
         <div style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; padding: 24px;">
-          <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0 0 10px;">Avg Client LTV</p>
+          <div class="flex justify-between items-start" style="margin-bottom: 10px;">
+            <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0;">Avg Client LTV</p>
+            <span style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-4); background: var(--paper-2); border: 1px solid var(--ink-5); border-radius: 2px; padding: 2px 5px;">Current</span>
+          </div>
           <p style="font-family: var(--font-display); font-style: italic; font-size: 40px; font-weight: 400; color: var(--info); margin: 0 0 6px; line-height: 1; letter-spacing: -0.02em;">${{ kpiAvgLTV.toLocaleString() }}</p>
-          <p style="font-size: 11px; color: var(--ink-4); margin: 0;">Average total paid per client across all projects.</p>
+          <p style="font-size: 11px; color: var(--ink-4); margin: 0;">Average total amount paid per client across all their projects.</p>
         </div>
 
       </div>
@@ -74,10 +83,13 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
         <div style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; padding: 24px;">
-          <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0 0 10px;">Win Rate</p>
+          <div class="flex justify-between items-start" style="margin-bottom: 10px;">
+            <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0;">Win Rate</p>
+            <span style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-4); background: var(--paper-2); border: 1px solid var(--ink-5); border-radius: 2px; padding: 2px 5px;">{{ currentFilterLabel }}</span>
+          </div>
           <div class="flex items-baseline gap-2" style="margin-bottom: 12px;">
             <p style="font-family: var(--font-display); font-style: italic; font-size: 48px; font-weight: 400; color: var(--ink); margin: 0; line-height: 1; letter-spacing: -0.02em;">{{ kpiWinRate }}%</p>
-            <p style="font-size: 13px; color: var(--ink-3); margin: 0;">of closed deals</p>
+            <p style="font-size: 13px; color: var(--ink-3); margin: 0;">of deals closed in period</p>
           </div>
           <div style="width: 100%; background: var(--ink-5); height: 2px; overflow: hidden;">
             <div :style="`width: ${kpiWinRate}%; background: var(--ember); height: 100%;`"></div>
@@ -85,9 +97,12 @@
         </div>
 
         <div style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; padding: 24px;">
-          <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0 0 10px;">Avg. Time to Close</p>
+          <div class="flex justify-between items-start" style="margin-bottom: 10px;">
+            <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0;">Avg. Time to Close</p>
+            <span style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-4); background: var(--paper-2); border: 1px solid var(--ink-5); border-radius: 2px; padding: 2px 5px;">{{ currentFilterLabel }}</span>
+          </div>
           <p style="font-family: var(--font-display); font-style: italic; font-size: 48px; font-weight: 400; color: var(--ink); margin: 0 0 8px; line-height: 1; letter-spacing: -0.02em;">{{ kpiAvgTime }} <span style="font-size: 20px; color: var(--ink-3); font-style: normal;">Days</span></p>
-          <p style="font-size: 12px; color: var(--ink-4); margin: 0;">From lead creation to contract signed.</p>
+          <p style="font-size: 12px; color: var(--ink-4); margin: 0;">From project creation to deal closed (won deals only).</p>
         </div>
 
       </div>
@@ -96,7 +111,10 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
         <div style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; padding: 24px;">
-          <h3 style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0 0 20px;">Why Deals are Lost</h3>
+          <div class="flex justify-between items-start" style="margin-bottom: 20px;">
+            <h3 style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0;">Why Deals are Lost</h3>
+            <span style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-4); background: var(--paper-2); border: 1px solid var(--ink-5); border-radius: 2px; padding: 2px 5px;">{{ currentFilterLabel }}</span>
+          </div>
           <div v-if="lossReasons.length === 0" style="text-align: center; color: var(--ink-4); padding: 40px 0; font-size: 13px;">Not enough data yet.</div>
           <div v-else class="space-y-5">
             <div v-for="item in lossReasons" :key="item.reason">
@@ -112,7 +130,10 @@
         </div>
 
         <div style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; padding: 24px;">
-          <h3 style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0 0 20px;">Client Demographics</h3>
+          <div class="flex justify-between items-start" style="margin-bottom: 20px;">
+            <h3 style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0;">Client Demographics</h3>
+            <span style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-4); background: var(--paper-2); border: 1px solid var(--ink-5); border-radius: 2px; padding: 2px 5px;">Current</span>
+          </div>
           <div v-if="clientTiers.length === 0" style="text-align: center; color: var(--ink-4); padding: 40px 0; font-size: 13px;">Not enough data yet.</div>
           <div v-else class="space-y-4">
             <div v-for="tier in clientTiers" :key="tier.name" class="flex items-center gap-4">
@@ -186,71 +207,106 @@ const fetchData = async () => {
   }
 }
 
-// $ Closed: Sum of payments made in the selected period, filtered by payment_records dates
-const kpiClosed = computed(() => {
-  const range = getDateRange()
-  if (!range) {
-    return projects.value.reduce((sum, p) => sum + (Number(p.amount_paid) || 0), 0)
+// Parse 'YYYY-MM-DD' strings as LOCAL midnight (not UTC) to avoid timezone drift
+// where a payment dated Jan 1 falls into Dec 31 in negative-UTC zones.
+const parseLocalDate = (dateStr) => {
+  if (!dateStr) return null
+  if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [y, m, d] = dateStr.split('-').map(Number)
+    return new Date(y, m - 1, d)
   }
+  return new Date(dateStr)
+}
+
+const inDateRange = (date) => {
+  const range = getDateRange()
+  if (!range) return true
+  if (!date) return false
+  return date >= range.start && date <= range.end
+}
+
+// Stages that mark a deal as closed. Mirrors ProjectDetail.vue:945.
+const WON_STAGES    = ['Contracts Signed', 'Invoice Paid', 'Request Review', 'Project Complete']
+const LOST_STAGES   = ['Churn']
+const CLOSED_STAGES = [...WON_STAGES, ...LOST_STAGES]
+
+// === $ CLOSED — period-aware ===
+// Sum of payments received within the selected period.
+// Source of truth: payment_records[] (per-payment dated entries).
+const kpiClosed = computed(() => {
   let total = 0
   projects.value.forEach(p => {
-    if (p.payment_records) {
-      try {
-        const records = typeof p.payment_records === 'string' ? JSON.parse(p.payment_records) : p.payment_records
-        records.forEach(record => {
-          if (record.date && record.amount) {
-            const paymentDate = new Date(record.date)
-            if (paymentDate >= range.start && paymentDate <= range.end) {
-              total += Number(record.amount) || 0
-            }
-          }
-        })
-      } catch (e) {
-        // fallback to amount_paid if payment_records is invalid
+    if (!p.payment_records) return
+    let records
+    try {
+      records = typeof p.payment_records === 'string' ? JSON.parse(p.payment_records) : p.payment_records
+    } catch { return }
+    if (!Array.isArray(records)) return
+    records.forEach(record => {
+      if (record.amount == null) return
+      const paymentDate = parseLocalDate(record.date)
+      if (!paymentDate) return
+      if (inDateRange(paymentDate)) {
+        total += Number(record.amount) || 0
       }
-    }
+    })
   })
   return total
 })
 
-// Active Pipeline: proposal values of Open deals with no payment yet, excluding Churn and those with amount_owed
+// === ACTIVE PIPELINE VALUE — snapshot ===
+// Sum of proposal_value for deals still being actively worked:
+// not closed (won or lost), not parked, no money flow yet.
 const kpiActivePipeline = computed(() => {
   return projects.value
     .filter(p =>
-      p.pipeline_stage !== 'Churn' &&
+      !CLOSED_STAGES.includes(p.pipeline_stage) &&
+      p.pipeline_stage !== 'Future Project Opp' &&
       !(Number(p.amount_paid) > 0) &&
       !(Number(p.amount_owed) > 0)
     )
     .reduce((sum, p) => sum + (Number(p.proposal_value) || 0), 0)
 })
 
-// Expected Income: sum of amount_owed across all projects
+// === EXPECTED INCOME — snapshot ===
+// Outstanding amounts owed, excluding lost deals.
 const kpiExpectedIncome = computed(() => {
-  return projects.value.reduce((sum, p) => sum + (Number(p.amount_owed) || 0), 0)
+  return projects.value
+    .filter(p => p.pipeline_stage !== 'Churn')
+    .reduce((sum, p) => sum + (Number(p.amount_owed) || 0), 0)
 })
 
-// Avg Client LTV: average of per-client sum of amount_paid + amount_owed
+// === AVG CLIENT LTV — snapshot ===
+// Average of total amount_paid per client (only money actually collected).
 const kpiAvgLTV = computed(() => {
   const totals = {}
   projects.value.forEach(p => {
-    if (p.client_id) {
-      totals[p.client_id] = (totals[p.client_id] || 0) + (Number(p.amount_paid) || 0) + (Number(p.amount_owed) || 0)
-    }
+    if (!p.client_id) return
+    totals[p.client_id] = (totals[p.client_id] || 0) + (Number(p.amount_paid) || 0)
   })
   const vals = Object.values(totals).filter(v => v > 0)
   if (!vals.length) return 0
   return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
 })
 
+// === WIN RATE — period-aware ===
+// Won vs (won + lost) for deals whose closed_at falls within the selected range.
 const kpiWinRate = computed(() => {
-  const won  = projects.value.filter(p => ['Contracts Signed','Invoice Paid','Project Complete'].includes(p.pipeline_stage)).length
-  const lost = projects.value.filter(p => p.pipeline_stage === 'Churn').length
+  const closedInRange = projects.value.filter(p => p.closed_at && inDateRange(new Date(p.closed_at)))
+  const won  = closedInRange.filter(p => WON_STAGES.includes(p.pipeline_stage)).length
+  const lost = closedInRange.filter(p => LOST_STAGES.includes(p.pipeline_stage)).length
   const total = won + lost
   return total === 0 ? 0 : Math.round((won / total) * 100)
 })
 
+// === AVG TIME TO CLOSE — period-aware ===
+// Days from created_at to closed_at, only for won deals closed within the selected range.
 const kpiAvgTime = computed(() => {
-  const closed = projects.value.filter(p => p.closed_at && ['Contracts Signed','Invoice Paid','Project Complete'].includes(p.pipeline_stage))
+  const closed = projects.value.filter(p =>
+    p.closed_at &&
+    WON_STAGES.includes(p.pipeline_stage) &&
+    inDateRange(new Date(p.closed_at))
+  )
   if (!closed.length) return 0
   const total = closed.reduce((sum, p) => {
     return sum + Math.ceil(Math.abs(new Date(p.closed_at) - new Date(p.created_at)) / (1000 * 60 * 60 * 24))
@@ -258,8 +314,15 @@ const kpiAvgTime = computed(() => {
   return Math.round(total / closed.length)
 })
 
+// === LOSS REASONS — period-aware ===
+// Distribution of loss_reason for Churn deals closed within the selected range.
 const lossReasons = computed(() => {
-  const lost = projects.value.filter(p => p.pipeline_stage === 'Churn' && p.loss_reason)
+  const lost = projects.value.filter(p =>
+    p.pipeline_stage === 'Churn' &&
+    p.loss_reason &&
+    p.closed_at &&
+    inDateRange(new Date(p.closed_at))
+  )
   if (!lost.length) return []
   const counts = {}
   lost.forEach(p => { counts[p.loss_reason] = (counts[p.loss_reason] || 0) + 1 })
