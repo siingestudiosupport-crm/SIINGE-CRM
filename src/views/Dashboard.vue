@@ -54,7 +54,7 @@
             <span style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-4); background: var(--paper-2); border: 1px solid var(--ink-5); border-radius: 2px; padding: 2px 5px;">Current</span>
           </div>
           <p style="font-family: var(--font-display); font-style: italic; font-size: 40px; font-weight: 400; color: var(--ink); margin: 0 0 6px; line-height: 1; letter-spacing: -0.02em;">${{ kpiActivePipeline.toLocaleString() }}</p>
-          <p style="font-size: 11px; color: var(--ink-4); margin: 0;">Proposal value of in-flight deals (no payment, not closed or parked).</p>
+          <p style="font-size: 11px; color: var(--ink-4); margin: 0;">Total proposal value of deals where $0 has been paid so far (excludes churned deals).</p>
         </div>
 
         <!-- Expected Income -->
@@ -64,7 +64,7 @@
             <span style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-4); background: var(--paper-2); border: 1px solid var(--ink-5); border-radius: 2px; padding: 2px 5px;">Current</span>
           </div>
           <p style="font-family: var(--font-display); font-style: italic; font-size: 40px; font-weight: 400; color: var(--caution); margin: 0 0 6px; line-height: 1; letter-spacing: -0.02em;">${{ kpiExpectedIncome.toLocaleString() }}</p>
-          <p style="font-size: 11px; color: var(--ink-4); margin: 0;">Outstanding amounts owed across non-Churn projects.</p>
+          <p style="font-size: 11px; color: var(--ink-4); margin: 0;">Total still owed on projects that have already received at least one payment.</p>
         </div>
 
         <!-- Avg Client LTV -->
@@ -74,7 +74,7 @@
             <span style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-4); background: var(--paper-2); border: 1px solid var(--ink-5); border-radius: 2px; padding: 2px 5px;">Current</span>
           </div>
           <p style="font-family: var(--font-display); font-style: italic; font-size: 40px; font-weight: 400; color: var(--info); margin: 0 0 6px; line-height: 1; letter-spacing: -0.02em;">${{ kpiAvgLTV.toLocaleString() }}</p>
-          <p style="font-size: 11px; color: var(--ink-4); margin: 0;">Average total amount paid per client across all their projects.</p>
+          <p style="font-size: 11px; color: var(--ink-4); margin: 0;">Average total paid per client (clients who have paid $0 are excluded).</p>
         </div>
 
       </div>
@@ -255,24 +255,20 @@ const kpiClosed = computed(() => {
 })
 
 // === ACTIVE PIPELINE VALUE — snapshot ===
-// Sum of proposal_value for deals still being actively worked:
-// not closed (won or lost), not parked, no money flow yet.
+// Sum of proposal_value for deals where amount_paid = 0.
+// Churn deals are excluded even if nothing has been paid.
 const kpiActivePipeline = computed(() => {
   return projects.value
-    .filter(p =>
-      !CLOSED_STAGES.includes(p.pipeline_stage) &&
-      p.pipeline_stage !== 'Future Project Opp' &&
-      !(Number(p.amount_paid) > 0) &&
-      !(Number(p.amount_owed) > 0)
-    )
+    .filter(p => Number(p.amount_paid) === 0 && !LOST_STAGES.includes(p.pipeline_stage))
     .reduce((sum, p) => sum + (Number(p.proposal_value) || 0), 0)
 })
 
 // === EXPECTED INCOME — snapshot ===
-// Outstanding amounts owed, excluding lost deals.
+// Outstanding amounts owed from projects where amount_paid is NOT zero
+// Only counts projects that have already received some payment
 const kpiExpectedIncome = computed(() => {
   return projects.value
-    .filter(p => p.pipeline_stage !== 'Churn')
+    .filter(p => Number(p.amount_paid) > 0)
     .reduce((sum, p) => sum + (Number(p.amount_owed) || 0), 0)
 })
 
