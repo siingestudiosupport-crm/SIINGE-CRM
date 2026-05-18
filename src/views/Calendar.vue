@@ -46,13 +46,16 @@
           <div v-for="evt in cell.events" :key="evt.id" class="mb-1">
             <button
               @click="evt.type === 'project' ? openProject(evt) : evt.type === 'zoom' ? openZoom(evt) : null"
-              style="width: 100%; text-align: left; padding: 3px 6px; border-radius: 2px; border: none; cursor: pointer; font-size: 9px; font-weight: 600; line-height: 1.2; transition: opacity 120ms; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;"
+              style="width: 100%; text-align: left; padding: 3px 6px; border-radius: 2px; border: none; cursor: pointer; font-size: 9px; font-weight: 600; line-height: 1.2; transition: opacity 120ms; overflow: hidden; display: block;"
               :style="getEventPillStyle(evt)"
               @mouseenter="e=>e.currentTarget.style.opacity='0.8'"
               @mouseleave="e=>e.currentTarget.style.opacity='1'"
               :title="evt.title"
             >
-              {{ evt.label }}
+              <span style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ evt.label }}</span>
+              <span v-if="evt.type === 'project' && evt.stage" style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; opacity: 0.75; font-size: 8px;">{{ evt.stage }}</span>
+              <span v-if="evt.type === 'zoom' && evt.meetingTime" style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; opacity: 0.75; font-size: 8px;">{{ evt.meetingTime }}</span>
+              <span v-if="(evt.type === 'followup' || evt.type === 'keyrotation') && evt.followupType" style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; opacity: 0.75; font-size: 8px;">{{ evt.followupType }}</span>
             </button>
           </div>
         </div>
@@ -74,11 +77,20 @@ import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../lib/supabaseClient'
 import ProjectDetail from '../components/ProjectDetail.vue'
 
+// Human-readable follow-up labels — mirrors TRIGGER_META in FollowUps.vue
+const FOLLOWUP_LABELS = {
+  proposal_3d:        'Proposal Follow-up',
+  proposal_7d:        'Second Follow-up',
+  proposal_weekly:    'Weekly Follow-up',
+  call_completed_24h: 'Post-Call Nudge',
+  cold_30d:           'Cold Re-engagement',
+  review_request:     'Request Review',
+}
+
 const events = ref([])
 const loading = ref(true)
 const isDetailOpen = ref(false)
 const selectedProject = ref(null)
-const zoomMeetings = ref([])
 
 const today = new Date()
 const currentYear = ref(today.getFullYear())
@@ -107,7 +119,7 @@ const fetchEvents = async () => {
     // Fetch projects with due dates and other important dates
     const { data: projects } = await supabase
       .from('projects')
-      .select('id, title, due_date, sow_sent_date, sow_signed_date, pipeline_stage, client_id, client:clients(name)')
+      .select('id, title, due_date, pipeline_stage, client_id, client:clients(name)')
       .order('due_date', { ascending: true })
 
     if (projects) {
@@ -122,62 +134,57 @@ const fetchEvents = async () => {
             type: 'project',
             date: p.due_date,
             title: `${p.title} (Due)`,
-            label: `📋 ${p.title}`,
+            label: p.title,
             stage: p.pipeline_stage,
             projectId: p.id,
             clientName,
             originalData: p
           })
         }
-
-        // SOW Sent date
-        if (p.sow_sent_date) {
-          allEvents.push({
-            id: `proj-sow-sent-${p.id}`,
-            type: 'project',
-            date: p.sow_sent_date,
-            title: `${p.title} (SOW Sent)`,
-            label: `📄 ${p.title} SOW`,
-            stage: p.pipeline_stage,
-            projectId: p.id,
-            clientName
-          })
-        }
-
-        // SOW Signed date
-        if (p.sow_signed_date) {
-          allEvents.push({
-            id: `proj-sow-signed-${p.id}`,
-            type: 'project',
-            date: p.sow_signed_date,
-            title: `${p.title} (SOW Signed)`,
-            label: `✅ ${p.title} SOW`,
-            stage: p.pipeline_stage,
-            projectId: p.id,
-            clientName
-          })
-        }
       }
     }
 
-    // Fetch zoom meetings
-    const { data: zooms } = await supabase
-      .from('zoom_meetings')
-      .select('id, meeting_title, scheduled_date, project_id, client_id')
+    // Fetch client meetings (scheduled_date set on the client card)
+    const { data: meetings } = await supabase
+      .from('clients')
+      .select('id, name, scheduled_date, meeting_link')
       .not('scheduled_date', 'is', null)
       .order('scheduled_date', { ascending: true })
 
-    if (zooms) {
-      for (const zoom of zooms) {
+    if (meetings) {
+      for (const m of meetings) {
+        const timeLabel = new Date(m.scheduled_date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
         allEvents.push({
-          id: `zoom-${zoom.id}`,
+          id: `meeting-${m.id}`,
           type: 'zoom',
-          date: zoom.scheduled_date,
-          title: zoom.meeting_title || 'Zoom Meeting',
-          label: `📹 ${zoom.meeting_title || 'Zoom'}`,
-          projectId: zoom.project_id,
-          clientId: zoom.client_id,
-          originalData: zoom
+          date: m.scheduled_date,
+          title: `${m.name || 'Meeting'} — ${timeLabel}`,
+          label: m.name || 'Meeting',
+          meetingTime: timeLabel,
+          clientId: m.id,
+          originalData: m
+        })
+      }
+    }
+
+    // Fetch pending follow-ups (email_queue items not yet completed)
+    const { data: followups } = await supabase
+      .from('email_queue')
+      .select('id, client_name, project_title, trigger_type, due_at, completed_at')
+      .is('completed_at', null)
+      .not('due_at', 'is', null)
+      .order('due_at', { ascending: true })
+
+    if (followups) {
+      for (const f of followups) {
+        allEvents.push({
+          id: `followup-${f.id}`,
+          type: 'followup',
+          date: f.due_at,
+          title: `${f.client_name || 'Follow-up'} — ${FOLLOWUP_LABELS[f.trigger_type] || 'Follow-up'}`,
+          label: f.client_name || 'Follow-up',
+          followupType: FOLLOWUP_LABELS[f.trigger_type] || 'Follow-up',
+          originalData: f
         })
       }
     }
@@ -225,12 +232,34 @@ const calendarCells = computed(() => {
 
 const getEventsForDate = (date) => {
   const dateStr = date.toISOString().split('T')[0]
-  return events.value.filter(evt => evt.date?.split('T')[0] === dateStr)
+  const matched = events.value.filter(evt => evt.date?.split('T')[0] === dateStr)
+
+  // Recurring key rotation reminder: 1st day of each quarter (Jan/Apr/Jul/Oct).
+  // Computed on the fly so it works for any month/year the user navigates to.
+  if (date.getDate() === 1 && [0, 3, 6, 9].includes(date.getMonth())) {
+    matched.push({
+      id: `keyrotation-${date.getFullYear()}-${date.getMonth()}`,
+      type: 'keyrotation',
+      date: dateStr,
+      title: 'Key Rotation — rotate API keys / credentials (every 3 months)',
+      label: 'Key Rotation',
+      followupType: 'Security',
+      originalData: null
+    })
+  }
+
+  return matched
 }
 
 const getEventPillStyle = (evt) => {
   if (evt.type === 'zoom') {
     return 'background: var(--info-soft); color: var(--info);'
+  }
+  if (evt.type === 'followup') {
+    return 'background: var(--caution-soft); color: var(--caution);'
+  }
+  if (evt.type === 'keyrotation') {
+    return 'background: var(--critical-soft); color: var(--critical);'
   }
   // Project event - color by stage
   const base = 'background: var(--ink); color: var(--paper);'
