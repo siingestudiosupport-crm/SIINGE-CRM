@@ -33,12 +33,6 @@
           <span style="font-size: 12px; color: var(--ink-4);">·</span>
           <span style="font-size: 12px; color: var(--ink-4); flex: 1;">{{ TRIGGER_META[tpl.trigger_type]?.timing }}</span>
 
-          <!-- Pending count badge -->
-          <span
-            v-if="queueByTrigger[tpl.trigger_type]?.length"
-            :style="`font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.10em; padding: 2px 7px; border-radius: 10px; background: ${TRIGGER_META[tpl.trigger_type]?.color}22; color: ${TRIGGER_META[tpl.trigger_type]?.color}; border: 1px solid ${TRIGGER_META[tpl.trigger_type]?.color}44; white-space: nowrap;`"
-          >{{ queueByTrigger[tpl.trigger_type].length }} pending</span>
-
           <!-- Saved flash -->
           <span
             v-if="savedId === tpl.id"
@@ -59,29 +53,6 @@
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
         </button>
-
-        <!-- Pending items list — always visible when there are items -->
-        <div
-          v-if="queueByTrigger[tpl.trigger_type]?.length"
-          :style="`border-top: 1px solid var(--bone-edge); background: ${expandedId === tpl.id ? 'var(--paper)' : 'var(--bone)'};`"
-        >
-          <div style="padding: 0 20px 0 40px;">
-            <div
-              v-for="item in queueByTrigger[tpl.trigger_type]"
-              :key="item.id"
-              style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--bone-edge);"
-              :style="item === queueByTrigger[tpl.trigger_type].at(-1) ? 'border-bottom: none; padding-bottom: 10px;' : ''"
-            >
-              <div style="display: flex; align-items: baseline; gap: 8px; min-width: 0; flex: 1;">
-                <span style="font-size: 12px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.client_name }}</span>
-                <span v-if="item.project_title" style="font-size: 11px; color: var(--ink-4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;">· {{ item.project_title }}</span>
-              </div>
-              <span :style="`font-size: 10px; font-weight: 700; font-family: var(--font-mono); white-space: nowrap; color: ${isOverdue(item.due_at) ? 'var(--critical)' : 'var(--ink-4)'};`">
-                {{ daysLabel(item.due_at) }}
-              </span>
-            </div>
-          </div>
-        </div>
 
         <!-- Expanded edit form -->
         <div
@@ -149,12 +120,11 @@ const TRIGGER_META = {
   review_request:      { label: 'Request Review',       timing: 'After project complete',          color: 'var(--positive)' },
 }
 
-const templates      = ref([])
-const queueByTrigger = ref({})
-const loading        = ref(true)
-const savingId       = ref(null)
-const savedId        = ref(null)
-const expandedId     = ref(null)
+const templates  = ref([])
+const loading    = ref(true)
+const savingId   = ref(null)
+const savedId    = ref(null)
+const expandedId = ref(null)
 
 const orderedTemplates = computed(() =>
   TRIGGER_ORDER
@@ -163,24 +133,8 @@ const orderedTemplates = computed(() =>
 )
 
 onMounted(async () => {
-  const [tplRes, qRes] = await Promise.all([
-    supabase.from('email_templates').select('*'),
-    supabase.from('email_queue')
-      .select('id, client_name, project_title, trigger_type, due_at')
-      .is('completed_at', null)
-      .is('sent_at', null)
-      .order('due_at', { ascending: true }),
-  ])
-
-  templates.value = tplRes.data || []
-
-  const map = {}
-  for (const item of (qRes.data || [])) {
-    if (!map[item.trigger_type]) map[item.trigger_type] = []
-    map[item.trigger_type].push(item)
-  }
-  queueByTrigger.value = map
-
+  const { data } = await supabase.from('email_templates').select('*')
+  templates.value = data || []
   loading.value = false
 })
 
@@ -199,15 +153,6 @@ const save = async (tpl) => {
   savingId.value = null
   savedId.value = tpl.id
   setTimeout(() => { if (savedId.value === tpl.id) savedId.value = null }, 2000)
-}
-
-const isOverdue = (due_at) => new Date(due_at) <= new Date()
-
-const daysLabel = (due_at) => {
-  const diff = Math.round((new Date(due_at) - Date.now()) / (1000 * 60 * 60 * 24))
-  if (diff < 0) return `${Math.abs(diff)}d overdue`
-  if (diff === 0) return 'Today'
-  return `In ${diff}d`
 }
 
 const formatDate = (iso) =>
