@@ -129,23 +129,38 @@
               <div class="grid grid-cols-2 gap-4">
                 <div class="col-span-2 md:col-span-1">
                   <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Brand Stage</label>
-                  <input v-model="form.brand_stage" type="text" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" />
+                  <select v-model="form.brand_stage" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'">
+                    <option value="">Select...</option>
+                    <option v-for="opt in withCurrent(BRAND_STAGE_OPTIONS, form.brand_stage)" :key="opt" :value="opt">{{ opt }}</option>
+                  </select>
                 </div>
                 <div class="col-span-2 md:col-span-1">
                   <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Investment Level</label>
-                  <input v-model="form.investment_level" type="text" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" />
+                  <select v-model="form.investment_level" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'">
+                    <option value="">Select...</option>
+                    <option v-for="opt in withCurrent(INVESTMENT_LEVEL_OPTIONS, form.investment_level)" :key="opt" :value="opt">{{ opt }}</option>
+                  </select>
                 </div>
                 <div class="col-span-2 md:col-span-1">
                   <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Timeline</label>
-                  <input v-model="form.development_timeline" type="text" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" />
+                  <select v-model="form.development_timeline" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'">
+                    <option value="">Select...</option>
+                    <option v-for="opt in withCurrent(TIMELINE_OPTIONS, form.development_timeline)" :key="opt" :value="opt">{{ opt }}</option>
+                  </select>
                 </div>
                 <div class="col-span-2 md:col-span-1">
                   <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Support Level</label>
-                  <input v-model="form.support_level" type="text" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" />
+                  <select v-model="form.support_level" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'">
+                    <option value="">Select...</option>
+                    <option v-for="opt in withCurrent(SUPPORT_LEVEL_OPTIONS, form.support_level)" :key="opt" :value="opt">{{ opt }}</option>
+                  </select>
                 </div>
                 <div class="col-span-2">
                   <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Primary Issue / Need</label>
-                  <textarea v-model="form.primary_issue" rows="2" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none; resize: vertical;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'"></textarea>
+                  <select v-model="form.primary_issue" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'">
+                    <option value="">Select...</option>
+                    <option v-for="opt in withCurrent(PRIMARY_ISSUE_OPTIONS, form.primary_issue)" :key="opt" :value="opt">{{ opt }}</option>
+                  </select>
                 </div>
                 <div class="col-span-2 md:col-span-1">
                   <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Meeting Date & Time</label>
@@ -298,6 +313,42 @@ import { useConfirmModal } from '../composables/useConfirmModal'
 import ProjectDetail from '../components/ProjectDetail.vue'
 
 const { confirm: showConfirm, alert: showAlert } = useConfirmModal()
+
+// Strategy call dropdown options — must match the LinkedIn lead form exactly
+const BRAND_STAGE_OPTIONS = [
+  'Pre-launch with capital allocated for product development',
+  'Generating sales with an early product line',
+  'Scaling with multiple collections or expanding distribution (DTC/retail)',
+  'Established brand investing in new product development or expansion',
+]
+const INVESTMENT_LEVEL_OPTIONS = [
+  'Under $5,000',
+  '$5,000–$10,000',
+  '$10,000–$25,000',
+  '$25,000+',
+]
+const TIMELINE_OPTIONS = [
+  'Immediately',
+  'Within 1–2 months',
+  '3–6 months',
+]
+const SUPPORT_LEVEL_OPTIONS = [
+  'Technical execution (tech packs, specs, and documentation)',
+  'Product development management (we lead sampling, fit, and factory execution)',
+  'Full product ownership (we lead design, development, and production from concept through launch)',
+]
+const PRIMARY_ISSUE_OPTIONS = [
+  'Fit or quality issues are leading to returns or customer dissatisfaction',
+  'Development is slow, inconsistent, or becoming too costly',
+  'Difficulty sourcing or managing reliable manufacturers',
+  'Missing or incomplete technical documentation (tech packs, specs, grading)',
+  'Internal bandwidth is limited and we need a partner to take ownership',
+]
+
+// Keep a client's existing (possibly legacy/free-text) value selectable so
+// editing an old client doesn't silently wipe data that predates these dropdowns.
+const withCurrent = (options, current) =>
+  current && !options.includes(current) ? [current, ...options] : options
 
 const clients = ref([])
 const loading = ref(true)

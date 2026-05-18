@@ -165,7 +165,8 @@ const saveDataAndGenerate = async () => {
 
     // TEXTO BASE EDITABLE (Tu jefa lo puede cambiar todo desde la pantalla)
     const firstName = (clientData.value.name || '').split(' ')[0]
-    const callDate = clientData.value.call_date ? new Date(clientData.value.call_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) : '[date of call]'
+    const meetingDate = clientData.value.call_date || clientData.value.scheduled_date
+    const callDate = meetingDate ? new Date(meetingDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) : '[date of call]'
     const projectName = clientData.value.project_name || '[project name]'
 
     let docsPhrase = ''

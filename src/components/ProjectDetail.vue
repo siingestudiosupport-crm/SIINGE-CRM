@@ -88,8 +88,14 @@
               <label class="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">{{ project?.id ? 'Proposal Value' : 'Client LTV' }}</label>
               <div v-if="project?.id" class="flex items-center border border-gray-300 rounded-lg px-3 bg-white focus-within:ring-2 focus-within:ring-blue-500 shadow-sm transition-all">
                 <span class="text-gray-500 mr-1 font-bold">$</span>
-                <input v-model="localEdits.proposal_value" type="number" class="w-full bg-transparent border-none p-2.5 outline-none text-sm font-bold text-gray-800" placeholder="0.00" />
+                <input v-model="localEdits.proposal_value" @input="recalculateOwed" type="number" class="w-full bg-transparent border-none p-2.5 outline-none text-sm font-bold text-gray-800" placeholder="0.00" />
               </div>
+              <button
+                v-if="project?.id && proposalHistory.length > 0"
+                @click="showProposalHistory = true"
+                type="button"
+                style="margin-top: 6px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ember); background: none; border: none; cursor: pointer; padding: 0; text-decoration: underline;"
+              >View History ({{ proposalHistory.length }})</button>
               <div v-else class="flex items-center border border-gray-300 rounded-lg px-3 py-2.5 bg-gray-50">
                 <span class="text-gray-500 mr-1 font-bold">$</span>
                 <span class="text-sm font-bold text-gray-800">{{ clientLTV.toLocaleString() }}</span>
@@ -245,10 +251,11 @@
                 </div>
                 <div>
                   <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: var(--ink-3); margin-bottom: 5px;">$ Owed</label>
-                  <div style="display: flex; align-items: center; border: 1px solid var(--ink-5); border-radius: 2px; padding: 0 10px;" @focusin="e=>e.currentTarget.style.borderColor='var(--ink)'" @focusout="e=>e.currentTarget.style.borderColor='var(--ink-5)'">
+                  <div style="display: flex; align-items: center; border: 1px solid var(--ink-5); border-radius: 2px; padding: 0 10px;">
                     <span style="color: var(--ink-4); font-size: 13px; margin-right: 4px; font-weight: 700;">$</span>
-                    <input v-model="localEdits.amount_owed" type="number" min="0" step="0.01" placeholder="0" style="flex: 1; border: none; background: transparent; padding: 8px 0; font-family: var(--font-sans); font-size: 13px; color: var(--ink); outline: none; font-weight: 700;" />
+                    <input v-model="localEdits.amount_owed" type="number" min="0" step="0.01" placeholder="0" style="flex: 1; border: none; background: transparent; padding: 8px 0; font-family: var(--font-sans); font-size: 13px; color: var(--ink); outline: none; font-weight: 700;" readonly />
                   </div>
+                  <p style="font-size: 10px; color: var(--ink-5); margin: 4px 0 0; font-style: italic;">Auto-calculated: Proposal Value − Paid</p>
                 </div>
               </div>
 
@@ -692,6 +699,27 @@
       </div>
     </div>
 
+    <!-- Proposal Value History modal -->
+    <div v-if="showProposalHistory" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(14,14,12,0.5);" @click="showProposalHistory = false">
+      <div @click.stop style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; box-shadow: var(--shadow-3); width: 100%; max-width: 420px; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden;">
+        <div class="flex justify-between items-center" style="padding: 16px 20px; background: var(--paper-2); border-bottom: 1px solid var(--bone-edge);">
+          <h3 style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: var(--ink-2); margin: 0;">Proposal Value History</h3>
+          <button @click="showProposalHistory = false" style="color: var(--ink-4); background: none; border: none; font-size: 20px; cursor: pointer; line-height: 1; padding: 0;">&times;</button>
+        </div>
+        <div style="padding: 12px 20px; overflow-y: auto;">
+          <div
+            v-for="(entry, idx) in [...proposalHistory].reverse()"
+            :key="idx"
+            style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--bone-edge);"
+          >
+            <span style="font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--ink);">${{ Number(entry.value).toLocaleString() }}</span>
+            <span style="font-size: 11px; color: var(--ink-4);">{{ new Date(entry.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }}</span>
+          </div>
+          <p v-if="proposalHistory.length === 0" style="text-align: center; color: var(--ink-4); font-size: 12px; padding: 20px 0; font-style: italic;">No changes recorded yet.</p>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -789,7 +817,7 @@ const buildLocalEdits = (p) => {
     sow_timeline: p?.sow_timeline || defaultTimeline,
     sow_fees_payment: p?.sow_fees_payment || defaultFees,
     amount_paid: p?.amount_paid || null,
-    amount_owed: p?.amount_owed || null,
+    amount_owed: Math.max((Number(p?.proposal_value) || 0) - (Number(p?.amount_paid) || 0), 0),
     payment_records: p?.payment_records ? JSON.parse(typeof p.payment_records === 'string' ? p.payment_records : JSON.stringify(p.payment_records)) : [],
     milestones: p?.milestones || '',
     due_date: p?.due_date || '',
@@ -826,6 +854,19 @@ const buildLocalEdits = (p) => {
 
 // Copia local de los campos editables — nunca mutamos la prop directamente
 const localEdits = ref(buildLocalEdits(props.project))
+
+// Proposal value change history — parsed from the project's JSONB column.
+const parseProposalHistory = (p) => {
+  if (!p?.proposal_value_history) return []
+  try {
+    const raw = typeof p.proposal_value_history === 'string'
+      ? JSON.parse(p.proposal_value_history)
+      : p.proposal_value_history
+    return Array.isArray(raw) ? raw : []
+  } catch { return [] }
+}
+const proposalHistory = ref(parseProposalHistory(props.project))
+const showProposalHistory = ref(false)
 
 const stages = [
   'Directory View', 'Intake Form Received', 'Call Booked', 'Proposal Sent',
@@ -882,6 +923,7 @@ watch(() => props.project?.id, async (newId, oldId) => {
   clientProjects.value = []
   if (newId && newId !== oldId && props.isOpen && props.project) {
     localEdits.value = buildLocalEdits(props.project)
+    proposalHistory.value = parseProposalHistory(props.project)
     selectedDocs.value = availableDocs.value
     fetchHubStatus()
   }
@@ -893,6 +935,7 @@ watch(() => props.project?.id, async (newId, oldId) => {
 watch(() => props.isOpen, (newVal) => {
   if (newVal && props.project) {
     localEdits.value = buildLocalEdits(props.project)
+    proposalHistory.value = parseProposalHistory(props.project)
     selectedDocs.value = availableDocs.value
     if (!props.project?.id) fetchClientProjects()
     fetchHubStatus()
@@ -954,10 +997,21 @@ const updateOverview = async () => {
   isSaving.value = true
   try {
     const isClosingStage = ['Contracts Signed', 'Invoice Paid', 'Project Complete', 'Request Review', 'Churn'].includes(localEdits.value.pipeline_stage)
+
+    // Append to proposal value history only when the value actually changed.
+    const newProposal = Number(localEdits.value.proposal_value) || 0
+    const oldProposal = Number(props.project.proposal_value) || 0
+    let history = proposalHistory.value
+    if (newProposal !== oldProposal) {
+      history = [...history, { value: newProposal, date: new Date().toISOString() }]
+      proposalHistory.value = history
+    }
+
     const updates = {
       pipeline_stage: localEdits.value.pipeline_stage,
       internal_notes: localEdits.value.internal_notes,
       proposal_value: localEdits.value.proposal_value || 0,
+      proposal_value_history: history.length > 0 ? JSON.stringify(history) : null,
       loss_reason: localEdits.value.pipeline_stage === 'Churn' ? localEdits.value.loss_reason : null,
       loss_reason_notes: localEdits.value.pipeline_stage === 'Churn' ? localEdits.value.loss_reason_notes : null,
       closed_at: isClosingStage ? (props.project.closed_at || new Date().toISOString()) : props.project.closed_at,
@@ -1140,9 +1194,17 @@ const addPaymentRecord = () => {
 }
 
 const recalculateTotalPaid = () => {
-  if (!localEdits.value.payment_records) return
-  const total = localEdits.value.payment_records.reduce((sum, record) => sum + (Number(record.amount) || 0), 0)
+  const records = localEdits.value.payment_records || []
+  const total = records.reduce((sum, record) => sum + (Number(record.amount) || 0), 0)
   localEdits.value.amount_paid = total
+  recalculateOwed()
+}
+
+// Owed is always Proposal Value minus what's been paid (never negative).
+const recalculateOwed = () => {
+  const proposal = Number(localEdits.value.proposal_value) || 0
+  const paid = Number(localEdits.value.amount_paid) || 0
+  localEdits.value.amount_owed = Math.max(proposal - paid, 0)
 }
 
 const addToHub = async () => {
@@ -1231,9 +1293,16 @@ const resetDocument = async (type) => {
 }
 
 const getCallDateText = () => {
-  if (!props.project?.call_date) return '[date of call]'
+  // The meeting set on the client card is stored in scheduled_date.
+  // Fall back to call_date for any legacy data that used it.
+  const meetingDate = props.project?.call_date
+    || props.project?.scheduled_date
+    || props.project?.client?.scheduled_date
+  if (!meetingDate) return '[date of call]'
 
-  const callDate = new Date(props.project.call_date)
+  const callDate = new Date(meetingDate)
+  if (isNaN(callDate.getTime())) return '[date of call]'
+
   const today = new Date()
   const yesterday = new Date(today)
   yesterday.setDate(yesterday.getDate() - 1)
