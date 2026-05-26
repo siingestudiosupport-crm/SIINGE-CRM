@@ -1312,13 +1312,28 @@ const getCallDateText = () => {
   const todayNorm = new Date(today.getFullYear(), today.getMonth(), today.getDate())
   const yesterdayNorm = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate())
 
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
   if (callDateNorm.getTime() === todayNorm.getTime()) {
     return 'today'
   } else if (callDateNorm.getTime() === yesterdayNorm.getTime()) {
     return 'yesterday'
   } else {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-    return `on ${days[callDate.getDay()]}`
+    // Days difference (negative = past)
+    const diffDays = Math.round((callDateNorm - todayNorm) / (1000 * 60 * 60 * 24))
+
+    // Within the last 6 days (same calendar week or very recent) → "on Monday"
+    if (diffDays >= -6) {
+      return `on ${days[callDate.getDay()]}`
+    }
+
+    // 7–13 days ago (previous week) → "last Wednesday"
+    if (diffDays >= -13) {
+      return `last ${days[callDate.getDay()]}`
+    }
+
+    // Older than 2 weeks → fallback to a plain date
+    return `on ${callDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`
   }
 }
 

@@ -70,10 +70,18 @@ serve(async (req) => {
 
       console.log(`Procesando a ${invitee.name} del país ${country || 'Desconocido'} con teléfono ${phone_number || 'N/A'}...`);
 
+      // Distinguir de cuál de los dos forms de Calendly vino el lead.
+      // LinkedIn  -> event type "strategy-call-siinge-inbound" (nombre suele contener "inbound")
+      // Otras redes -> event type "30min" ("30 Minute Meeting")
+      const eventName = (invitee.scheduled_event?.name || '').toLowerCase();
+      console.log('Calendly event name recibido:', invitee.scheduled_event?.name);
+      const detectedSource = eventName.includes('inbound') ? 'LinkedIn' : 'Social';
+
       // Verificar si el cliente ya existe para no sobreescribir estado de contratos
+      // ni el lead_source original (atribución de primer contacto).
       const { data: existing } = await supabase
         .from('clients')
-        .select('id')
+        .select('id, lead_source')
         .eq('email', invitee.email)
         .maybeSingle()
 
@@ -90,7 +98,7 @@ serve(async (req) => {
         meeting_link,
         phone_number,
         country,
-        lead_source: 'Calendly',
+        lead_source: existing?.lead_source || detectedSource,
       }
 
       // Solo setear estado de contratos en clientes nuevos

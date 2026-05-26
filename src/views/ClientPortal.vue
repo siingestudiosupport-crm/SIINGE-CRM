@@ -508,7 +508,7 @@ const submitDocument = async () => {
     if (!isNDA.value && sowProject.value) {
       signedProjectId = sowProject.value.id
       signedProjectTitle = sowProject.value.title
-      await supabase.from('projects').update({
+      const { error: sowUpdateError } = await supabase.from('projects').update({
         sow_status: 'Signed',
         sow_client_name: form.value.client_name,
         sow_client_title: form.value.client_title,
@@ -516,6 +516,11 @@ const submitDocument = async () => {
         sow_signature: sig64,
         sow_pdf_path: filePath
       }).eq('id', sowProject.value.id)
+
+      if (sowUpdateError) {
+        console.error('ERROR actualizando proyecto SOW:', sowUpdateError)
+        throw sowUpdateError
+      }
 
       // Update local state to reflect signed status
       sowProject.value.sow_status = 'Signed'
