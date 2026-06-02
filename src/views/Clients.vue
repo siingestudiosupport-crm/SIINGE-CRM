@@ -7,12 +7,23 @@
         <h1 style="font-family: var(--font-display); font-style: italic; font-weight: 400; font-size: 28px; color: var(--ink); margin: 0 0 4px; letter-spacing: -0.02em;">Clients Directory</h1>
         <p style="font-size: 13px; color: var(--ink-3); margin: 0;">Manage your leads and active clients.</p>
       </div>
-      <button
-        @click="openModal()"
-        style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 16px; background: var(--ink); color: var(--paper); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer; transition: opacity 120ms;"
-        @mouseenter="e => e.target.style.opacity = '0.85'"
-        @mouseleave="e => e.target.style.opacity = '1'"
-      >+ Add Client</button>
+      <div style="display:flex;gap:8px;">
+        <button
+          @click="importModal.show = true"
+          style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 16px; background: transparent; color: var(--ink); border: 1px solid var(--ink-5); border-radius: 2px; cursor: pointer; transition: all 120ms; display:flex;align-items:center;gap:6px;"
+          @mouseenter="e => e.currentTarget.style.borderColor='var(--ink)'"
+          @mouseleave="e => e.currentTarget.style.borderColor='var(--ink-5)'"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Import CSV
+        </button>
+        <button
+          @click="openModal()"
+          style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 16px; background: var(--ink); color: var(--paper); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer; transition: opacity 120ms;"
+          @mouseenter="e => e.target.style.opacity = '0.85'"
+          @mouseleave="e => e.target.style.opacity = '1'"
+        >+ Add Client</button>
+      </div>
     </div>
 
     <div v-if="loading" class="p-8 text-center" style="color: var(--ink-4);">
@@ -47,6 +58,10 @@
                 <div style="font-family: var(--font-display); font-style: italic; font-size: 19px; color: var(--ink); line-height: 1.2; letter-spacing: -0.01em;">{{ client.name }}</div>
                 <span v-if="client.projects?.length" style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; padding: 2px 6px; border-radius: 2px; border: 1px solid var(--ink-5); color: var(--ink-3); background: var(--paper); white-space: nowrap;">
                   {{ client.projects.length }} {{ client.projects.length === 1 ? 'project' : 'projects' }}
+                </span>
+                <span v-if="client.lead_source === 'LinkedIn'" style="display:inline-flex; align-items:center; gap:3px; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; padding: 2px 6px; border-radius: 2px; border: 1px solid #0a66c2; color: #0a66c2; background: rgba(10,102,194,0.08); white-space: nowrap;">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h14zM8.34 17V9.99H6V17h2.34zM7.17 8.92a1.36 1.36 0 100-2.71 1.36 1.36 0 000 2.71zM18 17v-3.85c0-2.05-1.1-3-2.56-3-1.18 0-1.71.65-2 1.1V9.99h-2.34V17h2.34v-3.7c0-.2.01-.4.07-.54.16-.4.52-.8 1.13-.8.8 0 1.12.6 1.12 1.49V17H18z"/></svg>
+                  LinkedIn
                 </span>
               </div>
               <div style="font-size: 11px; color: var(--ink-4); margin-top: 2px;">{{ client.email }}</div>
@@ -302,11 +317,138 @@
       @updated="fetchClients"
       @open-project="switchToProject"
     />
+
+    <!-- CSV Import Modal -->
+    <div v-if="importModal.show" style="position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(14,14,12,0.45);" @click.self="resetImport">
+      <div style="background:var(--bone);border:1px solid var(--bone-edge);border-radius:4px;box-shadow:var(--shadow-3);width:95%;max-width:640px;max-height:85vh;overflow-y:auto;">
+
+        <!-- Header -->
+        <div style="padding:18px 24px;border-bottom:1px solid var(--bone-edge);display:flex;justify-content:space-between;align-items:center;background:var(--paper-2);position:sticky;top:0;z-index:2;">
+          <div>
+            <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--ink-4);margin:0 0 3px;">Import CSV</p>
+            <h3 style="font-family:var(--font-display);font-style:italic;font-weight:400;font-size:18px;color:var(--ink);margin:0;letter-spacing:-0.02em;">
+              {{ importModal.step === 1 ? 'Upload File' : importModal.step === 2 ? 'Map Columns' : importModal.step === 3 ? 'Preview' : 'Importing…' }}
+            </h3>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="display:flex;gap:4px;">
+              <span v-for="s in [1,2,3,4]" :key="s" style="width:20px;height:3px;border-radius:2px;" :style="s <= importModal.step ? 'background:var(--ink);' : 'background:var(--ink-5);'"></span>
+            </div>
+            <button @click="resetImport" style="background:none;border:none;font-size:20px;color:var(--ink-4);cursor:pointer;line-height:1;">&times;</button>
+          </div>
+        </div>
+
+        <!-- Step 1: Upload -->
+        <div v-if="importModal.step === 1" style="padding:32px 24px;display:flex;flex-direction:column;align-items:center;gap:16px;">
+          <label
+            style="width:100%;border:2px dashed var(--bone-edge);border-radius:4px;padding:40px 24px;text-align:center;cursor:pointer;transition:border-color 120ms;"
+            @dragover.prevent @drop.prevent="handleFileUpload($event)"
+            @mouseenter="e=>e.currentTarget.style.borderColor='var(--ink)'"
+            @mouseleave="e=>e.currentTarget.style.borderColor='var(--bone-edge)'"
+          >
+            <input type="file" accept=".csv" style="display:none;" @change="handleFileUpload($event)" />
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--ink-4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 12px;display:block;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <p style="font-size:13px;font-weight:600;color:var(--ink-2);margin:0 0 4px;">Click to upload or drag & drop</p>
+            <p style="font-size:11px;color:var(--ink-4);margin:0;">CSV files only — LinkedIn Lead Form export</p>
+          </label>
+          <p style="font-size:11px;color:var(--ink-4);text-align:center;line-height:1.5;">
+            Matching is done by <strong>email</strong>. If the client already exists, only empty fields are filled in.
+          </p>
+        </div>
+
+        <!-- Step 2: Map Columns -->
+        <div v-if="importModal.step === 2" style="padding:20px 24px;display:flex;flex-direction:column;gap:12px;">
+          <p style="font-size:12px;color:var(--ink-3);margin:0;">Detected <strong>{{ importHeaders.length }} columns</strong> and <strong>{{ importRows.length }} rows</strong>. Map each column to a CRM field.</p>
+          <div style="border:1px solid var(--bone-edge);border-radius:2px;overflow:hidden;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;background:var(--paper-2);padding:8px 12px;border-bottom:1px solid var(--bone-edge);">
+              <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:var(--ink-4);">CSV Column</span>
+              <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:var(--ink-4);">CRM Field</span>
+            </div>
+            <div v-for="(header, idx) in importHeaders" :key="header"
+              style="display:grid;grid-template-columns:1fr 1fr;padding:8px 12px;align-items:center;"
+              :style="idx < importHeaders.length - 1 ? 'border-bottom:1px solid var(--bone-edge);' : ''"
+            >
+              <span style="font-size:12px;color:var(--ink-2);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px;">{{ header }}</span>
+              <select v-model="importMapping[header]"
+                style="width:100%;padding:5px 8px;border:1px solid var(--bone-edge);border-radius:2px;background:var(--paper);color:var(--ink);font-size:12px;font-family:inherit;"
+              >
+                <option value="">— Skip —</option>
+                <option v-for="f in CRM_IMPORT_FIELDS" :key="f.key" :value="f.key">{{ f.label }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Preview -->
+        <div v-if="importModal.step === 3" style="padding:20px 24px;display:flex;flex-direction:column;gap:12px;">
+          <p style="font-size:12px;color:var(--ink-3);margin:0;">Preview of the first 5 rows. <strong>{{ importRows.length }} records</strong> will be imported in total.</p>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div v-for="(row, idx) in mappedPreview" :key="idx"
+              style="border:1px solid var(--bone-edge);border-radius:2px;padding:10px 12px;background:var(--paper);display:flex;flex-direction:column;gap:4px;"
+            >
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:12px;font-weight:600;color:var(--ink-2);">{{ row.name || '(no name)' }}</span>
+                <span style="font-size:11px;color:var(--ink-4);font-family:var(--font-mono);">{{ row.email || '(no email)' }}</span>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                <span v-for="[k,v] in Object.entries(row).filter(([k,v]) => v && k !== 'name' && k !== 'email')" :key="k"
+                  style="font-size:10px;color:var(--ink-3);background:var(--bone);border:1px solid var(--bone-edge);border-radius:2px;padding:2px 6px;"
+                >{{ k }}: {{ v }}</span>
+              </div>
+            </div>
+          </div>
+          <p v-if="!mappedPreview.some(r => r.email)" style="font-size:12px;color:var(--critical);font-weight:600;">⚠ No row has an email mapped. Matching won't work without email.</p>
+        </div>
+
+        <!-- Step 4: Results -->
+        <div v-if="importModal.step === 4" style="padding:32px 24px;display:flex;flex-direction:column;align-items:center;gap:20px;">
+          <div v-if="importRunning" style="text-align:center;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite;margin:0 auto 12px;display:block;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+            <p style="font-size:13px;color:var(--ink-3);margin:0;">Importing {{ importRows.length }} records…</p>
+          </div>
+          <div v-else style="width:100%;display:flex;flex-direction:column;gap:12px;">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center;">
+              <div style="background:var(--positive-soft);border:1px solid #B8C4A0;border-radius:4px;padding:16px 8px;">
+                <p style="font-size:28px;font-weight:700;color:var(--positive);margin:0 0 4px;font-family:var(--font-display);font-style:italic;">{{ importResults.created }}</p>
+                <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:var(--positive);margin:0;">Created</p>
+              </div>
+              <div style="background:var(--info-soft);border:1px solid #B6C0C7;border-radius:4px;padding:16px 8px;">
+                <p style="font-size:28px;font-weight:700;color:var(--info);margin:0 0 4px;font-family:var(--font-display);font-style:italic;">{{ importResults.updated }}</p>
+                <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:var(--info);margin:0;">Updated</p>
+              </div>
+              <div style="background:var(--paper-2);border:1px solid var(--bone-edge);border-radius:4px;padding:16px 8px;">
+                <p style="font-size:28px;font-weight:700;color:var(--ink-3);margin:0 0 4px;font-family:var(--font-display);font-style:italic;">{{ importResults.skipped }}</p>
+                <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:var(--ink-4);margin:0;">Skipped</p>
+              </div>
+            </div>
+            <div v-if="importResults.errors.length > 0" style="background:var(--critical-soft);border:1px solid var(--critical);border-radius:4px;padding:12px;">
+              <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:var(--critical);margin:0 0 6px;">Errors ({{ importResults.errors.length }})</p>
+              <p v-for="e in importResults.errors" :key="e" style="font-size:11px;color:var(--critical);margin:2px 0;font-family:var(--font-mono);">{{ e }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="padding:14px 24px;border-top:1px solid var(--bone-edge);display:flex;gap:8px;justify-content:flex-end;background:var(--paper-2);position:sticky;bottom:0;z-index:2;">
+          <button v-if="importModal.step < 4" @click="resetImport" style="padding:7px 16px;border:1px solid var(--bone-edge);border-radius:2px;background:transparent;color:var(--ink-3);font-size:13px;cursor:pointer;">Cancel</button>
+          <button v-if="importModal.step === 2" @click="importModal.step = 3" :disabled="!Object.values(importMapping).some(v => v === 'email')"
+            style="padding:7px 16px;border:none;border-radius:2px;background:var(--ink);color:var(--paper);font-size:13px;font-weight:600;cursor:pointer;"
+            :style="!Object.values(importMapping).some(v => v === 'email') ? 'opacity:0.4;cursor:not-allowed;' : ''"
+          >Preview →</button>
+          <button v-if="importModal.step === 3" @click="importModal.step = 2" style="padding:7px 16px;border:1px solid var(--bone-edge);border-radius:2px;background:transparent;color:var(--ink-3);font-size:13px;cursor:pointer;">Adjust mapping</button>
+          <button v-if="importModal.step === 3" @click="runImport"
+            style="padding:7px 16px;border:none;border-radius:2px;background:var(--ink);color:var(--paper);font-size:13px;font-weight:600;cursor:pointer;"
+          >Import {{ importRows.length }} records</button>
+          <button v-if="importModal.step === 4 && !importRunning" @click="resetImport" style="padding:7px 16px;border:none;border-radius:2px;background:var(--ink);color:var(--paper);font-size:13px;font-weight:600;cursor:pointer;">Done</button>
+        </div>
+
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../lib/supabaseClient'
 import { hubSupabase } from '../lib/hubClient'
 import { useConfirmModal } from '../composables/useConfirmModal'
@@ -355,6 +497,215 @@ const loading = ref(true)
 const showModal = ref(false)
 const isSubmitting = ref(false)
 const editingId = ref(null)
+
+// ─── CSV Import ───────────────────────────────────────────────────────────────
+const CRM_IMPORT_FIELDS = [
+  { key: 'name',                    label: 'Full Name' },
+  { key: '_first_name',             label: 'First Name' },
+  { key: '_last_name',              label: 'Last Name' },
+  { key: 'email',                   label: 'Email' },
+  { key: 'company',                 label: 'Company' },
+  { key: 'phone_number',            label: 'Phone Number' },
+  { key: 'country',                 label: 'Country' },
+  { key: 'brand_stage',             label: 'Brand Stage' },
+  { key: 'investment_level',        label: 'Investment Level' },
+  { key: 'development_timeline',    label: 'Timeline' },
+  { key: 'support_level',           label: 'Support Level' },
+  { key: 'primary_issue',           label: 'Primary Issue' },
+]
+
+const importModal   = ref({ show: false, step: 1 })
+const importHeaders = ref([])
+const importRows    = ref([])
+const importMapping = ref({})
+const importRunning = ref(false)
+const importResults = ref({ created: 0, updated: 0, skipped: 0, errors: [] })
+
+function parseCSV(text) {
+  const lines = text.replace(/\r/g, '').split('\n').filter(l => l.trim())
+  if (!lines.length) return { headers: [], rows: [] }
+  const parseRow = (line) => {
+    const vals = []; let inQ = false, cur = ''
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i]
+      if (ch === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++ } else inQ = !inQ }
+      else if (ch === ',' && !inQ) { vals.push(cur.trim()); cur = '' }
+      else cur += ch
+    }
+    vals.push(cur.trim())
+    return vals
+  }
+  const headers = parseRow(lines[0])
+  const rows = lines.slice(1).map(l => {
+    const v = parseRow(l)
+    return headers.reduce((o, h, i) => { o[h] = v[i] || ''; return o }, {})
+  }).filter(r => Object.values(r).some(v => v))
+  return { headers, rows }
+}
+
+// LinkedIn Lead Form V2 — exact column → CRM field mapping
+const LINKEDIN_COLUMN_MAP = {
+  'first name':                                                          '_first_name',
+  'last name':                                                           '_last_name',
+  'email address':                                                       'email',
+  'how would you best describe your brand\'s current stage of growth?': 'brand_stage',
+  'what type of product development support are you looking for?':      'support_level',
+  'when are you planning to begin development?':                        'development_timeline',
+  'company':                                                             'company',
+  'phone':                                                               'phone_number',
+  'phone number':                                                        'phone_number',
+  'country':                                                             'country',
+}
+
+// Map LinkedIn answer text → CRM dropdown value (keyword-based, order matters).
+// LinkedIn's answer wording differs from the CRM dropdowns, so we match on
+// distinctive keywords rather than exact strings.
+const VALUE_NORMALIZER = {
+  brand_stage: [
+    { match: 'pre-launch',       value: 'Pre-launch with capital allocated for product development' },
+    { match: 'prelaunch',        value: 'Pre-launch with capital allocated for product development' },
+    { match: 'generating sales', value: 'Generating sales with an early product line' },
+    { match: 'scaling',          value: 'Scaling with multiple collections or expanding distribution (DTC/retail)' },
+    { match: 'established',       value: 'Established brand investing in new product development or expansion' },
+  ],
+  support_level: [
+    { match: 'tech pack',         value: 'Technical execution (tech packs, specs, and documentation)' },
+    { match: 'technical',         value: 'Technical execution (tech packs, specs, and documentation)' },
+    { match: 'documentation',     value: 'Technical execution (tech packs, specs, and documentation)' },
+    { match: 'sampling',          value: 'Product development management (we lead sampling, fit, and factory execution)' },
+    { match: 'factory execution', value: 'Product development management (we lead sampling, fit, and factory execution)' },
+    { match: 'management',        value: 'Product development management (we lead sampling, fit, and factory execution)' },
+    { match: 'full product',      value: 'Full product ownership (we lead design, development, and production from concept through launch)' },
+    { match: 'ownership',         value: 'Full product ownership (we lead design, development, and production from concept through launch)' },
+    { match: 'concept',           value: 'Full product ownership (we lead design, development, and production from concept through launch)' },
+  ],
+  development_timeline: [
+    { match: 'immediate', value: 'Immediately' },
+    { match: '1-2',       value: 'Within 1–2 months' },
+    { match: '1–2',       value: 'Within 1–2 months' },
+    { match: '3-6',       value: '3–6 months' },
+    { match: '3–6',       value: '3–6 months' },
+  ],
+}
+
+function normalizeValue(field, raw) {
+  const rules = VALUE_NORMALIZER[field]
+  if (!rules || !raw) return raw
+  const lower = raw.toLowerCase().replace(/["""]/g, '').trim()
+  for (const { match, value } of rules) {
+    if (lower.includes(match)) return value
+  }
+  return raw
+}
+
+// Strip ALL punctuation (apostrophes, question marks, etc.) so header matching
+// is immune to smart-quote vs straight-quote and other encoding differences.
+const normalizeKey = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+
+// Pre-normalize the LinkedIn map keys once for reliable lookup
+const NORMALIZED_LINKEDIN_MAP = Object.fromEntries(
+  Object.entries(LINKEDIN_COLUMN_MAP).map(([k, v]) => [normalizeKey(k), v])
+)
+
+function autoMapColumns(headers) {
+  const mapping = {}
+  for (const h of headers) {
+    const hl = normalizeKey(h)
+    // Exact LinkedIn match first (punctuation-insensitive)
+    if (NORMALIZED_LINKEDIN_MAP[hl]) { mapping[h] = NORMALIZED_LINKEDIN_MAP[hl]; continue }
+    // Generic fallback patterns
+    const PATTERNS = {
+      email:                ['email', 'correo'],
+      name:                 ['full name', 'nombre completo'],
+      _first_name:          ['firstname', 'nombre'],
+      _last_name:           ['lastname', 'apellido'],
+      company:              ['company name', 'organization', 'empresa'],
+      phone_number:         ['mobile', 'telefono', 'cell'],
+      country:              ['location', 'país', 'pais'],
+      brand_stage:          ['brand stage', 'brand status'],
+      investment_level:     ['investment level', 'budget'],
+      development_timeline: ['timeframe'],
+      support_level:        ['support type'],
+      primary_issue:        ['challenge', 'issue', 'problema'],
+    }
+    let matched = ''
+    for (const [field, pats] of Object.entries(PATTERNS)) {
+      if (pats.some(p => hl.includes(p))) { matched = field; break }
+    }
+    mapping[h] = matched
+  }
+  return mapping
+}
+
+function handleFileUpload(event) {
+  const file = event.target?.files?.[0] || event.dataTransfer?.files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const { headers, rows } = parseCSV(e.target.result)
+    importHeaders.value = headers
+    importRows.value = rows
+    importMapping.value = autoMapColumns(headers)
+    importModal.value.step = 3 // skip manual mapping, go straight to preview
+  }
+  reader.readAsText(file)
+}
+
+// Treat null, empty, and common placeholder strings as "fillable"
+const PLACEHOLDER_VALUES = ['', 'no especificado', 'not specified', 'na', 'n/a', 'none', '-', 'null']
+function isEmptyValue(v) {
+  return v == null || PLACEHOLDER_VALUES.includes(String(v).toLowerCase().trim())
+}
+
+function buildClientObj(row) {
+  const obj = {}; let first = '', last = ''
+  for (const [col, field] of Object.entries(importMapping.value)) {
+    if (!field || !row[col]) continue
+    const raw = row[col].replace(/^"+|"+$/g, '').trim() // strip extra quotes
+    if (field === '_first_name') first = raw
+    else if (field === '_last_name') last = raw
+    else obj[field] = normalizeValue(field, raw)
+  }
+  if (first || last) obj.name = [first, last].filter(Boolean).join(' ')
+  return obj
+}
+
+const mappedPreview = computed(() => importRows.value.slice(0, 5).map(buildClientObj))
+
+async function runImport() {
+  importRunning.value = true
+  importModal.value.step = 4
+  const res = { created: 0, updated: 0, skipped: 0, errors: [] }
+  for (const row of importRows.value) {
+    try {
+      const obj = buildClientObj(row)
+      if (!obj.email) { res.skipped++; continue }
+      const email = obj.email.toLowerCase().trim()
+      const { data: existing } = await supabase.from('clients').select('*').eq('email', email).maybeSingle()
+      if (existing) {
+        const updates = {}
+        for (const [k, v] of Object.entries(obj)) { if (isEmptyValue(existing[k]) && v) updates[k] = v }
+        updates.lead_source = 'LinkedIn' // tag merged clients as LinkedIn-sourced
+        await supabase.from('clients').update(updates).eq('id', existing.id)
+        res.updated++
+      } else {
+        await supabase.from('clients').insert([{ ...obj, email, lead_source: 'LinkedIn' }])
+        res.created++
+      }
+    } catch (e) { res.errors.push(row.email || 'unknown') }
+  }
+  importResults.value = res
+  importRunning.value = false
+  fetchClients()
+}
+
+function resetImport() {
+  importModal.value = { show: false, step: 1 }
+  importHeaders.value = []; importRows.value = []; importMapping.value = {}
+  importResults.value = { created: 0, updated: 0, skipped: 0, errors: [] }
+  importRunning.value = false
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 const isDetailOpen = ref(false)
 const selectedProject = ref(null)
@@ -491,7 +842,8 @@ const openClientDetail = (client) => {
     title: `Client Profile: ${client.name}`,
     client: client,
     client_id: client.id,
-    pipeline_stage: 'Directory View',
+    pipeline_stage: client.pipeline_stage || 'Directory View',
+    internal_notes: client.internal_notes || '',
     created_at: client.created_at,
     scheduled_date: client.scheduled_date,
     meeting_link: client.meeting_link

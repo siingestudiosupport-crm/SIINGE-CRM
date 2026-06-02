@@ -472,7 +472,7 @@ const submitDocument = async () => {
 
     if (uploadError) {
       console.error("ERROR EN STORAGE:", uploadError);
-      throw new Error(`Error subiendo el PDF: ${uploadError.message}`);
+      throw new Error(`Error uploading the PDF: ${uploadError.message}`);
     }
 
     console.log("Subida exitosa, datos recibidos:", uploadData);

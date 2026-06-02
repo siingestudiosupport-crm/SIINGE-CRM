@@ -31,7 +31,8 @@
           v-for="cell in calendarCells"
           :key="cell.key"
           style="min-height: 100px; border-right: 1px solid var(--bone-edge); border-bottom: 1px solid var(--bone-edge); padding: 6px;"
-          :style="cell.isToday ? 'background: var(--paper);' : cell.isCurrentMonth ? '' : 'background: var(--paper-2);'"
+          :style="(cell.isToday ? 'background: var(--paper);' : cell.isCurrentMonth ? '' : 'background: var(--paper-2);') + (cell.isCurrentMonth ? 'cursor:pointer;' : '')"
+          @click="cell.isCurrentMonth && openAddModal(cell)"
         >
           <!-- Day number -->
           <div style="margin-bottom: 4px;">
@@ -45,19 +46,66 @@
           <!-- Event pills -->
           <div v-for="evt in cell.events" :key="evt.id" class="mb-1">
             <button
-              @click="evt.type === 'project' ? openProject(evt) : evt.type === 'zoom' ? openZoom(evt) : null"
+              @click="handlePillClick(evt, $event)"
               style="width: 100%; text-align: left; padding: 3px 6px; border-radius: 2px; border: none; cursor: pointer; font-size: 9px; font-weight: 600; line-height: 1.2; transition: opacity 120ms; overflow: hidden; display: block;"
               :style="getEventPillStyle(evt)"
               @mouseenter="e=>e.currentTarget.style.opacity='0.8'"
               @mouseleave="e=>e.currentTarget.style.opacity='1'"
               :title="evt.title"
             >
-              <span style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ evt.label }}</span>
-              <span v-if="evt.type === 'project' && evt.stage" style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; opacity: 0.75; font-size: 8px;">{{ evt.stage }}</span>
+              <span style="display:flex;align-items:center;gap:2px;min-width:0;">
+                <span v-if="evt.type==='hub_event'||evt.type==='hub_stage'" style="flex-shrink:0;font-size:6px;font-weight:800;letter-spacing:0.08em;padding:1px 3px;border-radius:1px;background:rgba(255,255,255,0.3);color:inherit;">HUB</span>
+                <span v-else-if="evt.type==='project'" style="flex-shrink:0;font-size:6px;font-weight:800;letter-spacing:0.08em;padding:1px 3px;border-radius:1px;background:rgba(0,0,0,0.12);color:inherit;">CRM</span>
+                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ evt.label }}</span>
+              </span>
+              <span v-if="evt.type === 'project' && (evt.deliverableLabel || evt.stage)" style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; opacity: 0.75; font-size: 8px;">{{ evt.deliverableLabel || evt.stage }}</span>
+              <span v-if="evt.type === 'hub_stage' && evt.stageName" style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; opacity: 0.75; font-size: 8px;">{{ evt.stageName }}</span>
               <span v-if="evt.type === 'zoom' && evt.meetingTime" style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; opacity: 0.75; font-size: 8px;">{{ evt.meetingTime }}</span>
               <span v-if="(evt.type === 'followup' || evt.type === 'keyrotation') && evt.followupType" style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; opacity: 0.75; font-size: 8px;">{{ evt.followupType }}</span>
+              <span v-if="evt.type === 'hub_event'" style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; opacity: 0.75; font-size: 8px;">{{ evt.eventCountry }}</span>
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Due Date modal -->
+    <div v-if="addModal.show" style="position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(14,14,12,0.45);" @click.self="addModal.show = false">
+      <div style="background:var(--bone);border:1px solid var(--bone-edge);border-radius:4px;box-shadow:var(--shadow-3);width:90%;max-width:500px;display:flex;flex-direction:column;overflow:hidden;max-height:90vh;">
+        <div style="padding:20px 24px;border-bottom:1px solid var(--bone-edge);display:flex;justify-content:space-between;align-items:center;background:var(--paper-2);flex-shrink:0;">
+          <div>
+            <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.16em;color:var(--ink-4);margin:0 0 4px;">Set Due Date</p>
+            <h3 style="font-family:var(--font-display);font-style:italic;font-weight:400;font-size:20px;color:var(--ink);margin:0;letter-spacing:-0.02em;">{{ formatAddDate(addModal.date) }}</h3>
+          </div>
+          <button @click="addModal.show = false" style="background:none;border:none;font-size:20px;color:var(--ink-4);cursor:pointer;line-height:1;padding:0;" @mouseenter="e=>e.target.style.color='var(--ink)'" @mouseleave="e=>e.target.style.color='var(--ink-4)'">&times;</button>
+        </div>
+
+        <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px;">
+          <div>
+            <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:var(--ink-4);margin-bottom:6px;">Project</label>
+            <select v-model="addModal.projectId" @change="onProjectSelected" style="width:100%;padding:8px 10px;border:1px solid var(--bone-edge);border-radius:2px;background:var(--paper);color:var(--ink);font-size:13px;font-family:inherit;cursor:pointer;">
+              <option :value="null">— Select project —</option>
+              <option v-for="p in allProjectsList" :key="p.id" :value="p.id">{{ p.title }} · {{ p.pipeline_stage }}</option>
+            </select>
+          </div>
+
+          <div v-if="addModal.loadingProject" style="text-align:center;padding:12px;color:var(--ink-4);font-size:12px;font-style:italic;">Loading…</div>
+
+          <div v-if="addModal.projectData && !addModal.loadingProject">
+            <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:var(--ink-4);margin-bottom:6px;">Which due date?</label>
+            <select v-model="addModal.selectedField" style="width:100%;padding:8px 10px;border:1px solid var(--bone-edge);border-radius:2px;background:var(--paper);color:var(--ink);font-size:13px;font-family:inherit;cursor:pointer;">
+              <option value="due_date">Main Due Date</option>
+              <option v-for="f in DELIVERABLE_FIELDS" :key="f.dueField" :value="f.dueField">{{ f.label }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="padding:16px 24px;border-top:1px solid var(--bone-edge);display:flex;gap:8px;justify-content:flex-end;background:var(--paper-2);flex-shrink:0;">
+          <button @click="addModal.show = false" style="padding:7px 16px;border:1px solid var(--bone-edge);border-radius:2px;background:transparent;color:var(--ink-3);font-size:13px;cursor:pointer;">Cancel</button>
+          <button @click="saveAddModal" :disabled="!addModal.projectData || !addModal.selectedField || addModal.saving"
+            style="padding:7px 16px;border:none;border-radius:2px;background:var(--ink);color:var(--paper);font-size:13px;font-weight:600;cursor:pointer;transition:opacity 120ms;"
+            :style="(!addModal.projectData || !addModal.selectedField || addModal.saving) ? 'opacity:0.4;cursor:not-allowed;' : ''"
+          >{{ addModal.saving ? 'Saving…' : 'Set Due Date' }}</button>
         </div>
       </div>
     </div>
@@ -75,7 +123,24 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../lib/supabaseClient'
+import { hubSupabase } from '../lib/hubClient'
 import ProjectDetail from '../components/ProjectDetail.vue'
+
+const DELIVERABLE_FIELDS = [
+  { label: 'Trend / Market Analysis',        dueField: 'deliverable_trend_analysis_due' },
+  { label: 'Apparel Design',                 dueField: 'deliverable_design_due' },
+  { label: 'Branding / Packaging Design',    dueField: 'deliverable_branding_due' },
+  { label: 'Tech Pack',                      dueField: 'deliverable_tech_pack_due' },
+  { label: 'Manu Quotes Due',                dueField: 'deliverable_manu_quotes_due' },
+  { label: 'Initial Sample Due',             dueField: 'deliverable_initial_sample_due' },
+  { label: 'Approved Sample Due',            dueField: 'deliverable_approved_sample_due' },
+  { label: 'Size Range Approval Due',        dueField: 'deliverable_size_range_due' },
+  { label: 'Bulk Due',                       dueField: 'deliverable_bulk_due' },
+  { label: 'Product Analysis x Refinement', dueField: 'deliverable_product_analysis_due' },
+  { label: 'In House Patternmaking',         dueField: 'deliverable_in_house_patternmaking_due' },
+  { label: 'In House Proto',                dueField: 'deliverable_in_house_proto_due' },
+  { label: 'In House Manufacturing',         dueField: 'deliverable_in_house_manufacturing_due' },
+]
 
 // Human-readable follow-up labels — mirrors TRIGGER_META in FollowUps.vue
 const FOLLOWUP_LABELS = {
@@ -91,6 +156,8 @@ const events = ref([])
 const loading = ref(true)
 const isDetailOpen = ref(false)
 const selectedProject = ref(null)
+const allProjectsList = ref([])
+const addModal = ref({ show: false, date: '', projectId: null, saving: false, projectData: null, selectedField: 'due_date', loadingProject: false })
 
 const today = new Date()
 const currentYear = ref(today.getFullYear())
@@ -116,18 +183,22 @@ const fetchEvents = async () => {
     loading.value = true
     const allEvents = []
 
-    // Fetch projects with due dates and other important dates
+    // Fetch projects with due dates and all deliverable due dates
     const { data: projects } = await supabase
       .from('projects')
-      .select('id, title, due_date, pipeline_stage, client_id, client:clients(name)')
-      .order('due_date', { ascending: true })
+      .select(`id, title, due_date, pipeline_stage, client_id, client:clients(name),
+        deliverable_trend_analysis_due, deliverable_design_due, deliverable_branding_due,
+        deliverable_tech_pack_due, deliverable_manu_quotes_due, deliverable_initial_sample_due,
+        deliverable_approved_sample_due, deliverable_size_range_due, deliverable_bulk_due,
+        deliverable_product_analysis_due, deliverable_in_house_patternmaking_due,
+        deliverable_in_house_proto_due, deliverable_in_house_manufacturing_due`)
+      .order('title', { ascending: true })
 
     if (projects) {
       for (const p of projects) {
         const client = /** @type {any} */ (p.client)
         const clientName = (Array.isArray(client) ? client[0]?.name : client?.name) || ''
 
-        // Due date event
         if (p.due_date) {
           allEvents.push({
             id: `proj-due-${p.id}`,
@@ -140,6 +211,23 @@ const fetchEvents = async () => {
             clientName,
             originalData: p
           })
+        }
+
+        for (const f of DELIVERABLE_FIELDS) {
+          if (p[f.dueField]) {
+            allEvents.push({
+              id: `proj-${f.dueField}-${p.id}`,
+              type: 'project',
+              date: p[f.dueField],
+              title: `${p.title} — ${f.label}`,
+              label: p.title,
+              deliverableLabel: f.label,
+              stage: p.pipeline_stage,
+              projectId: p.id,
+              clientName,
+              originalData: p
+            })
+          }
         }
       }
     }
@@ -189,12 +277,119 @@ const fetchEvents = async () => {
       }
     }
 
+    // Fetch Hub textile events
+    const { data: hubEvents, error: hubEventsError } = await hubSupabase
+      .from('events')
+      .select('id, event_name, start_date, country')
+      .not('start_date', 'is', null)
+      .order('start_date', { ascending: true })
+
+    if (hubEventsError) console.error('[Calendar] Hub events error:', hubEventsError)
+    if (hubEvents) {
+      for (const e of hubEvents) {
+        allEvents.push({
+          id: `hub-event-${e.id}`,
+          type: 'hub_event',
+          date: e.start_date,
+          title: `${e.event_name}${e.country ? ` — ${e.country}` : ''}`,
+          label: e.event_name,
+          eventCountry: e.country || 'Global',
+          originalData: e
+        })
+      }
+    }
+
+    // Fetch Hub project names (no FK defined in Hub DB — must fetch separately)
+    const { data: hubProjectsData } = await hubSupabase.from('projects').select('id, project_name')
+    const hubProjectMap = {}
+    if (hubProjectsData) hubProjectsData.forEach(p => { hubProjectMap[p.id] = p.project_name })
+
+    // Fetch Hub project stage due dates
+    const { data: hubStages, error: hubStagesError } = await hubSupabase
+      .from('project_stages')
+      .select('id, stage_name, due_date, status, project_id')
+      .not('due_date', 'is', null)
+      .order('due_date', { ascending: true })
+
+    if (hubStagesError) console.error('[Calendar] Hub stages error:', hubStagesError)
+    if (hubStages) {
+      for (const s of hubStages) {
+        const projectName = hubProjectMap[s.project_id] || 'Hub Project'
+        allEvents.push({
+          id: `hub-stage-${s.id}`,
+          type: 'hub_stage',
+          date: s.due_date,
+          title: `${projectName} — ${s.stage_name}`,
+          label: projectName,
+          stageName: s.stage_name,
+          status: s.status,
+          projectId: s.project_id,
+          originalData: s
+        })
+      }
+    }
+
+    // Fetch all projects for the add-due-date modal
+    const { data: projectsList } = await supabase
+      .from('projects')
+      .select('id, title, pipeline_stage')
+      .order('title', { ascending: true })
+    allProjectsList.value = projectsList || []
+
     events.value = allEvents
   } catch (e) {
     console.error('Error fetching calendar events:', e)
   } finally {
     loading.value = false
   }
+}
+
+function handlePillClick(evt, nativeEvent) {
+  nativeEvent.stopPropagation() // never open the modal from a pill click
+  if (evt.type === 'project') {
+    openProject(evt)
+  } else if (evt.type === 'hub_stage') {
+    window.open(`https://siinge-hub.vercel.app/projects?project=${evt.projectId}&stage=${evt.originalData?.id}`, '_blank')
+  } else if (evt.type === 'hub_event') {
+    window.open('https://siinge-hub.vercel.app/events', '_blank')
+  } else if (evt.type === 'keyrotation') {
+    window.open('https://drive.google.com/file/d/1d_YlLhS53_0K6sijI9_spzhKvZftVW2c/view?usp=sharing', '_blank')
+  }
+  // followup, zoom → no action
+}
+
+function openAddModal(cell, preselectedProjectId = null) {
+  const d = cell.date
+  const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  addModal.value = { show: true, date: dateStr, projectId: preselectedProjectId, saving: false, projectData: null, selectedField: 'due_date', loadingProject: false }
+  if (preselectedProjectId) onProjectSelected()
+}
+
+function formatAddDate(dateStr) {
+  if (!dateStr) return ''
+  const [y, m, d] = dateStr.split('-')
+  return new Date(Number(y), Number(m) - 1, Number(d)).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+}
+
+async function onProjectSelected() {
+  const id = addModal.value.projectId
+  if (!id) { addModal.value.projectData = null; return }
+  addModal.value.loadingProject = true
+  const { data } = await supabase.from('projects').select('id').eq('id', id).single()
+  addModal.value.projectData = data
+  addModal.value.selectedField = 'due_date'
+  addModal.value.loadingProject = false
+}
+
+async function saveAddModal() {
+  if (!addModal.value.projectData || !addModal.value.selectedField) return
+  addModal.value.saving = true
+  await supabase.from('projects')
+    .update({ [addModal.value.selectedField]: addModal.value.date })
+    .eq('id', addModal.value.projectId)
+  addModal.value.show = false
+  addModal.value.saving = false
+  fetchEvents()
 }
 
 const calendarCells = computed(() => {
@@ -260,6 +455,14 @@ const getEventPillStyle = (evt) => {
   }
   if (evt.type === 'keyrotation') {
     return 'background: var(--critical-soft); color: var(--critical);'
+  }
+  if (evt.type === 'hub_event') {
+    return 'background: rgba(139,92,246,0.15); color: #8b5cf6;'
+  }
+  if (evt.type === 'hub_stage') {
+    if (evt.status === 'Completed') return 'background: var(--positive-soft); color: var(--positive);'
+    if (evt.status === 'In Progress') return 'background: #ede9fe; color: #6d28d9;'
+    return 'background: #f3f4f6; color: #374151;'
   }
   // Project event - color by stage
   const base = 'background: var(--ink); color: var(--paper);'

@@ -62,16 +62,49 @@
         
         <div v-if="activeTab === 'Overview'" class="space-y-6">
           
-          <section v-if="suggestedAction" style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; padding: 16px;">
-            <div class="flex items-start gap-3">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ember)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
-              <div>
-                <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ember); margin: 0 0 4px;">Suggested Action</p>
-                <p style="font-size: 13px; font-weight: 600; color: var(--ink); margin: 0 0 4px;">{{ suggestedAction.title }}</p>
-                <p style="font-size: 12px; color: var(--ink-3); margin: 0; font-style: italic; line-height: 1.5;">{{ suggestedAction.desc }}</p>
+          <section v-if="activeDueDates.length > 0" style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; overflow: hidden;">
+            <div style="padding: 10px 14px; background: var(--paper-2); border-bottom: 1px solid var(--bone-edge); display:flex; justify-content:space-between; align-items:center;">
+              <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0;">Due Dates</p>
+              <button v-if="activeDueDates.length > 4" @click="showAllDueDates = true"
+                style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--ember);background:none;border:none;cursor:pointer;padding:0;">
+                See all ({{ activeDueDates.length }})
+              </button>
+            </div>
+            <div>
+              <div v-for="(d, idx) in activeDueDates.slice(0, 4)" :key="d.label + idx"
+                style="display: flex; justify-content: space-between; align-items: center; padding: 9px 14px;"
+                :style="idx < Math.min(activeDueDates.length, 4) - 1 ? 'border-bottom: 1px solid var(--bone-edge);' : ''"
+              >
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span style="font-size:7px;font-weight:800;letter-spacing:0.1em;padding:1px 4px;border-radius:1px;" :style="d.source==='HUB' ? 'background:rgba(139,92,246,0.12);color:#7c3aed;' : 'background:rgba(0,0,0,0.07);color:var(--ink-4);'">{{ d.source }}</span>
+                  <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3);">{{ d.label }}</span>
+                </div>
+                <span style="font-size: 11px; font-weight: 700; font-family: var(--font-mono);" :style="d.statusStyle">{{ d.formattedDate }}</span>
               </div>
             </div>
           </section>
+
+          <!-- All Due Dates modal -->
+          <div v-if="showAllDueDates" style="position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(14,14,12,0.45);" @click.self="showAllDueDates = false">
+            <div style="background:var(--bone);border:1px solid var(--bone-edge);border-radius:4px;box-shadow:var(--shadow-3);width:90%;max-width:480px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;">
+              <div style="padding:16px 20px;border-bottom:1px solid var(--bone-edge);display:flex;justify-content:space-between;align-items:center;background:var(--paper-2);flex-shrink:0;">
+                <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--ink-3);margin:0;">All Due Dates</p>
+                <button @click="showAllDueDates = false" style="background:none;border:none;font-size:18px;color:var(--ink-4);cursor:pointer;line-height:1;">&times;</button>
+              </div>
+              <div style="overflow-y:auto;flex:1;">
+                <div v-for="(d, idx) in activeDueDates" :key="d.label + idx"
+                  style="display:flex;justify-content:space-between;align-items:center;padding:9px 20px;"
+                  :style="idx < activeDueDates.length - 1 ? 'border-bottom:1px solid var(--bone-edge);' : ''"
+                >
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="font-size:7px;font-weight:800;letter-spacing:0.1em;padding:1px 4px;border-radius:1px;" :style="d.source==='HUB' ? 'background:rgba(139,92,246,0.12);color:#7c3aed;' : 'background:rgba(0,0,0,0.07);color:var(--ink-4);'">{{ d.source }}</span>
+                    <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);">{{ d.label }}</span>
+                  </div>
+                  <span style="font-size:11px;font-weight:700;font-family:var(--font-mono);" :style="d.statusStyle">{{ d.formattedDate }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <section class="grid grid-cols-2 gap-4">
             <div>
@@ -324,26 +357,6 @@
                 <textarea v-model="localEdits.milestones" rows="3" placeholder="Project notes..." style="width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink-2); background: var(--paper); outline: none; resize: vertical; line-height: 1.6;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur.capture="e=>e.target.style.borderColor='var(--ink-5)'"></textarea>
               </div>
 
-              <!-- Add to Manu Hub -->
-              <div style="border-top: 1px solid var(--bone-edge); padding-top: 14px;">
-                <button
-                  v-if="!project.hub_project_id"
-                  @click="addToHub"
-                  :disabled="isAddingToHub"
-                  style="width: 100%; font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.16em; padding: 11px 16px; background: var(--ink); color: var(--paper); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer; transition: opacity 120ms; display: flex; align-items: center; justify-content: center; gap: 8px;"
-                  :style="isAddingToHub ? 'opacity:0.5;cursor:not-allowed;' : ''"
-                  @mouseenter="e => !isAddingToHub && (e.currentTarget.style.opacity='0.75')"
-                  @mouseleave="e => e.currentTarget.style.opacity='1'"
-                >
-                  <svg v-if="isAddingToHub" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-                  <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-                  {{ isAddingToHub ? 'Adding to Hub...' : 'Add to Manu Hub' }}
-                </button>
-                <div v-else style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--positive-soft); border: 1px solid #B8C4A0; border-radius: 2px;">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--positive)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--positive);">Added to Manu Hub</span>
-                </div>
-              </div>
 
             </div>
           </section>
@@ -592,18 +605,19 @@
 
       </div>
 
-      <div v-if="project?.id" class="flex-shrink-0 flex justify-between items-center" style="padding: 12px 24px; border-top: 1px solid var(--bone-edge); background: var(--paper-2);">
-        <button @click="deleteProject"
+      <div v-if="project" class="flex-shrink-0 flex justify-between items-center" style="padding: 12px 24px; border-top: 1px solid var(--bone-edge); background: var(--paper-2);">
+        <button v-if="project?.id" @click="deleteProject"
           style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 8px 16px; background: transparent; color: var(--critical); border: 1px solid var(--critical); border-radius: 2px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: opacity 120ms;"
           @mouseenter="e=>e.currentTarget.style.opacity='0.7'" @mouseleave="e=>e.currentTarget.style.opacity='1'">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
           Delete Project
         </button>
+        <span v-else></span>
         <div class="flex items-center gap-3">
           <span v-if="savedFlash" style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--positive);">Saved ✓</span>
           <button
             v-if="activeTab === 'Overview'"
-            @click="updateOverview"
+            @click="project?.id ? updateOverview() : updateClientCard()"
             :disabled="isSaving"
             style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 24px; background: var(--ink); color: var(--paper); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer; transition: opacity 120ms; display: inline-flex; align-items: center; gap: 6px;"
             :style="isSaving ? 'opacity: 0.5; cursor: not-allowed;' : ''"
@@ -783,7 +797,42 @@ const fetchHubStatus = async () => {
   hubStatus.value = data?.status || null
 }
 
-const isAddingToHub = ref(false)
+const hubStageDates = ref([])
+const showAllDueDates = ref(false)
+const fetchHubStageDates = async () => {
+  const crmId = props.project?.id
+  if (!crmId) { hubStageDates.value = []; return }
+
+  const fetchStages = async (projectId) => {
+    const { data } = await hubSupabase
+      .from('project_stages')
+      .select('stage_name, due_date')
+      .eq('project_id', projectId)
+      .not('due_date', 'is', null)
+      .order('due_date', { ascending: true })
+    return data || []
+  }
+
+  // Try 1: Hub project ID = CRM project ID (projects synced via addToHub)
+  let stages = await fetchStages(crmId)
+  if (stages.length > 0) { hubStageDates.value = stages; return }
+
+  // Try 2: Hub project has crm_project_id = CRM project ID
+  const { data: hubProj } = await hubSupabase
+    .from('projects').select('id').eq('crm_project_id', crmId).maybeSingle()
+  if (hubProj) { hubStageDates.value = await fetchStages(hubProj.id); return }
+
+  // Try 3: Match by project name
+  const projectName = props.project?.title
+  if (projectName) {
+    const { data: hubByName } = await hubSupabase
+      .from('projects').select('id').ilike('project_name', projectName).maybeSingle()
+    if (hubByName) { hubStageDates.value = await fetchStages(hubByName.id); return }
+  }
+
+  hubStageDates.value = []
+}
+
 
 const deliverableItems = [
   { label: 'Trend / Market Analysis',       model: 'deliverable_trend_analysis', dueField: 'deliverable_trend_analysis_due' },
@@ -926,6 +975,7 @@ watch(() => props.project?.id, async (newId, oldId) => {
     proposalHistory.value = parseProposalHistory(props.project)
     selectedDocs.value = availableDocs.value
     fetchHubStatus()
+    fetchHubStageDates()
   }
   if (props.isOpen && !props.project?.id && props.project?.client_id) {
     await fetchClientProjects()
@@ -939,18 +989,35 @@ watch(() => props.isOpen, (newVal) => {
     selectedDocs.value = availableDocs.value
     if (!props.project?.id) fetchClientProjects()
     fetchHubStatus()
+    fetchHubStageDates()
   }
 }, { immediate: true })
 
-const suggestedAction = computed(() => {
-  const p = props.project
-  const c = p?.client
-  if (!p || !c) return null
-  if (p.pipeline_stage === 'Project Complete') return { title: 'Post-Project Follow-up', desc: 'In 30 days, check-in for next collection or upsell development.' }
-  if (p.sow_status === 'Sent' && !p.sow_signed_date) return { title: 'Proposal Follow-up', desc: 'No response yet? Follow up in 3 days to maintain momentum.' }
-  if (p.pipeline_stage === 'Call Booked') return { title: 'High Priority: Send Proposal', desc: 'Call completed. Send SOW within the next 24 hours to secure the deal.' }
-  if (c.client_tier === 'Early-stage' && p.pipeline_stage === 'Intake Form Received') return { title: 'Nurture Lead', desc: 'Early-stage founder. Re-engage if no meeting is booked.' }
-  return null
+const activeDueDates = computed(() => {
+  const today = new Date(); today.setHours(0,0,0,0)
+  const toEntry = (label, dateStr, source) => {
+    const date = new Date(dateStr + 'T12:00:00')
+    const diff = Math.ceil((date - today) / (1000 * 60 * 60 * 24))
+    return {
+      label, source,
+      formattedDate: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      statusStyle: diff < 0 ? 'color: var(--critical);' : diff === 0 ? 'color: var(--caution);' : diff <= 7 ? 'color: var(--ember);' : 'color: var(--ink-2);',
+      diff,
+    }
+  }
+
+  const crmFields = [
+    { field: 'due_date', label: 'Main Due Date' },
+    ...deliverableItems.filter(i => i.dueField).map(i => ({ field: i.dueField, label: i.label })),
+    ...productDevelopmentDueFields.map(s => ({ field: s.model, label: s.label })),
+  ]
+  const crmDates = crmFields
+    .filter(f => localEdits.value[f.field])
+    .map(f => toEntry(f.label, localEdits.value[f.field], 'CRM'))
+
+  const hubDates = hubStageDates.value.map(s => toEntry(s.stage_name, s.due_date, 'HUB'))
+
+  return [...crmDates, ...hubDates].sort((a, b) => a.diff - b.diff)
 })
 
 const timeToClose = computed(() => {
@@ -1073,6 +1140,31 @@ const updateOverview = async () => {
     emit('updated')
   } catch (e) {
     console.error("Error updating overview:", e)
+    await showAlert('Error saving changes: ' + (e.message || e), 'Save Failed')
+  } finally {
+    isSaving.value = false
+  }
+}
+
+// Client card (no project yet): Stage / Notes / Proposal Value live on the
+// projects table, but a bare client has no project row — so we persist them
+// onto the clients table instead, keeping the card's UI exactly the same.
+const updateClientCard = async () => {
+  if (!props.project?.client_id) return
+  isSaving.value = true
+  try {
+    const updates = {
+      pipeline_stage: localEdits.value.pipeline_stage || null,
+      internal_notes: localEdits.value.internal_notes || null,
+      client_tier: localEdits.value.client_tier || null,
+      scheduled_date: localEdits.value.scheduled_date || null,
+    }
+    const { error } = await supabase.from('clients').update(updates).eq('id', props.project.client_id)
+    if (error) throw error
+    flashSaved()
+    emit('updated')
+  } catch (e) {
+    console.error('Error saving client card:', e)
     await showAlert('Error saving changes: ' + (e.message || e), 'Save Failed')
   } finally {
     isSaving.value = false
@@ -1207,31 +1299,6 @@ const recalculateOwed = () => {
   localEdits.value.amount_owed = Math.max(proposal - paid, 0)
 }
 
-const addToHub = async () => {
-  if (!props.project?.id || props.project.hub_project_id) return
-  isAddingToHub.value = true
-  try {
-    const { error: hubError } = await hubSupabase.from('projects').insert([{
-      id: props.project.id,
-      project_name: props.project.title,
-      client_name: props.project.client?.name || '',
-      status: 'active',
-      crm_stage: props.project.pipeline_stage || '',
-      crm_project_id: props.project.id,
-      crm_client_id: props.project.client_id || null,
-      created_at: new Date().toISOString(),
-    }])
-    if (hubError) throw hubError
-    const { error: crmError } = await supabase
-      .from('projects').update({ hub_project_id: props.project.id }).eq('id', props.project.id)
-    if (crmError) throw crmError
-    emit('updated')
-  } catch (e) {
-    await showAlert('Error adding to Hub: ' + (e.message || e), 'Error')
-  } finally {
-    isAddingToHub.value = false
-  }
-}
 
 const resetSowToTemplates = async () => {
   localEdits.value.sow_deliverables = defaultDeliverables

@@ -84,10 +84,6 @@
                   <svg width="5" height="5" viewBox="0 0 6 6" style="flex-shrink:0;"><circle cx="3" cy="3" r="3" fill="currentColor"/></svg>
                   HUB · {{ hubProjectMap[project.hub_project_id]?.status || '…' }}
                 </span>
-                <span v-if="hubProjectMap[project.hub_project_id]?.current_stage_due_date" style="display: inline-flex; align-items: center; gap: 3px; font-family: var(--font-mono); font-size: 9px; color: var(--ink-3); white-space: nowrap;">
-                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                  {{ formatDate(hubProjectMap[project.hub_project_id].current_stage_due_date) }}
-                </span>
               </div>
 
               <!-- Status chips -->
@@ -107,12 +103,11 @@
                 </span>
                 <div class="flex items-center gap-2">
                   <button
-                    v-if="!project.hub_project_id"
-                    @click.stop="addToHub(project)"
+                    @click.stop="openDueDates(project)"
                     style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-3); background: none; border: 1px solid var(--ink-5); border-radius: 2px; padding: 3px 6px; cursor: pointer; transition: all 120ms; white-space: nowrap;"
                     @mouseenter="e => (e.currentTarget.style.color='var(--ink)', e.currentTarget.style.borderColor='var(--ink)')"
                     @mouseleave="e => (e.currentTarget.style.color='var(--ink-3)', e.currentTarget.style.borderColor='var(--ink-5)')"
-                  >+ Hub</button>
+                  >Due Dates</button>
                   <span style="font-family: var(--font-mono); font-size: 10px; color: var(--ink-4);">
                     {{ project.created_at ? new Date(project.created_at).toLocaleDateString() : '' }}
                   </span>
@@ -138,15 +133,58 @@
       @close="isDetailOpen = false"
       @updated="fetchProjects"
     />
+
+    <!-- Due Dates modal -->
+    <div v-if="dueDatesModal.show" style="position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(14,14,12,0.45);" @click.self="dueDatesModal.show = false">
+      <div style="background:var(--bone);border:1px solid var(--bone-edge);border-radius:4px;box-shadow:var(--shadow-3);width:90%;max-width:460px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;">
+        <div style="padding:16px 20px;border-bottom:1px solid var(--bone-edge);display:flex;justify-content:space-between;align-items:center;background:var(--paper-2);flex-shrink:0;">
+          <div>
+            <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:var(--ink-4);margin:0 0 3px;">Due Dates</p>
+            <h3 style="font-family:var(--font-display);font-style:italic;font-weight:400;font-size:18px;color:var(--ink);margin:0;letter-spacing:-0.02em;">{{ dueDatesModal.project?.title }}</h3>
+          </div>
+          <button @click="dueDatesModal.show = false" style="background:none;border:none;font-size:20px;color:var(--ink-4);cursor:pointer;line-height:1;">&times;</button>
+        </div>
+        <div v-if="modalDueDates.length === 0" style="padding:24px;text-align:center;color:var(--ink-4);font-size:12px;font-style:italic;">No due dates set yet.</div>
+        <div v-else style="overflow-y:auto;flex:1;">
+          <div v-for="(d, idx) in modalDueDates" :key="d.label + idx"
+            style="display:flex;justify-content:space-between;align-items:center;padding:9px 20px;"
+            :style="idx < modalDueDates.length - 1 ? 'border-bottom:1px solid var(--bone-edge);' : ''"
+          >
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-size:7px;font-weight:800;letter-spacing:0.1em;padding:1px 4px;border-radius:1px;" :style="d.source==='HUB' ? 'background:rgba(139,92,246,0.12);color:#7c3aed;' : 'background:rgba(0,0,0,0.07);color:var(--ink-4);'">{{ d.source }}</span>
+              <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);">{{ d.label }}</span>
+            </div>
+            <span style="font-size:11px;font-weight:700;font-family:var(--font-mono);" :style="d.statusStyle">{{ d.formattedDate }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { supabase } from '../lib/supabaseClient'
 import { hubSupabase } from '../lib/hubClient'
 import { useConfirmModal } from '../composables/useConfirmModal'
 import ProjectDetail from '../components/ProjectDetail.vue'
+
+const CRM_DUE_FIELDS = [
+  { field: 'due_date',                              label: 'Main Due Date' },
+  { field: 'deliverable_trend_analysis_due',        label: 'Trend Analysis' },
+  { field: 'deliverable_design_due',                label: 'Apparel Design' },
+  { field: 'deliverable_branding_due',              label: 'Branding/Packaging' },
+  { field: 'deliverable_tech_pack_due',             label: 'Tech Pack' },
+  { field: 'deliverable_manu_quotes_due',           label: 'Manu Quotes' },
+  { field: 'deliverable_initial_sample_due',        label: 'Initial Sample' },
+  { field: 'deliverable_approved_sample_due',       label: 'Approved Sample' },
+  { field: 'deliverable_size_range_due',            label: 'Size Range Approval' },
+  { field: 'deliverable_bulk_due',                  label: 'Bulk Due' },
+  { field: 'deliverable_product_analysis_due',      label: 'Product Analysis' },
+  { field: 'deliverable_in_house_patternmaking_due',label: 'In House Patternmaking' },
+  { field: 'deliverable_in_house_proto_due',        label: 'In House Proto' },
+  { field: 'deliverable_in_house_manufacturing_due',label: 'In House Mfg' },
+]
 
 const { alert: showAlert, confirm: showConfirm } = useConfirmModal()
 
@@ -168,9 +206,34 @@ const projects = ref([])
 const loading = ref(true)
 const isDetailOpen = ref(false)
 const selectedProject = ref(null)
-const hubProjectMap = ref({}) // { [hub_project_id]: { status, project_name } }
+const hubProjectMap = ref({})
 const isImporting = ref(false)
 let hubChannel = null
+
+const dueDatesModal = ref({ show: false, project: null })
+
+function openDueDates(project) {
+  dueDatesModal.value = { show: true, project }
+}
+
+const modalDueDates = computed(() => {
+  const p = dueDatesModal.value.project
+  if (!p) return []
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const toEntry = (label, dateStr, source) => {
+    const date = new Date(dateStr + 'T12:00:00')
+    const diff = Math.ceil((date - today) / (1000 * 60 * 60 * 24))
+    return {
+      label, source,
+      formattedDate: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      statusStyle: diff < 0 ? 'color: var(--critical);' : diff === 0 ? 'color: var(--caution);' : diff <= 7 ? 'color: var(--ember);' : 'color: var(--ink-2);',
+      diff,
+    }
+  }
+  const crmDates = CRM_DUE_FIELDS.filter(f => p[f.field]).map(f => toEntry(f.label, p[f.field], 'CRM'))
+  const hubDates = (hubProjectMap.value[p.hub_project_id]?.stageDates || []).map(s => toEntry(s.stage_name, s.due_date, 'HUB'))
+  return [...crmDates, ...hubDates].sort((a, b) => a.diff - b.diff)
+})
 
 const getStageHeaderStyle = (stage) => {
   const map = {
@@ -223,19 +286,18 @@ const fetchHubStatuses = async (projectList) => {
   const [{ data: projectsData }, { data: stagesData }] = await Promise.all([
     hubSupabase.from('projects').select('id, status, project_name').in('id', hubIds),
     hubSupabase.from('project_stages')
-      .select('project_id, due_date')
+      .select('project_id, stage_name, due_date')
       .in('project_id', hubIds)
       .is('completed_date', null)
       .not('due_date', 'is', null)
-      .order('step_order', { ascending: true })
+      .order('due_date', { ascending: true })
   ])
 
-  const dueDateMap = {}
+  const stageDatesMap = {}
   if (stagesData) {
     for (const stage of stagesData) {
-      if (!(stage.project_id in dueDateMap)) {
-        dueDateMap[stage.project_id] = stage.due_date
-      }
+      if (!stageDatesMap[stage.project_id]) stageDatesMap[stage.project_id] = []
+      stageDatesMap[stage.project_id].push({ stage_name: stage.stage_name, due_date: stage.due_date })
     }
   }
 
@@ -245,7 +307,7 @@ const fetchHubStatuses = async (projectList) => {
       map[p.id] = {
         status: p.status,
         project_name: p.project_name,
-        current_stage_due_date: dueDateMap[p.id] ?? null
+        stageDates: stageDatesMap[p.id] || []
       }
     })
     hubProjectMap.value = map
