@@ -229,33 +229,6 @@
               </div>
             </div>
           </div>
-          <div>
-            <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Due Date</label>
-            <input v-model="projectForm.due_date" type="date" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" />
-          </div>
-          <div>
-            <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 6px;">Link Hub Project</label>
-            <select v-model="projectForm.hub_project_id" :disabled="loadingHubProjects" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none; appearance: none; cursor: pointer;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'" @change="onHubProjectSelect">
-              <option :value="null">{{ loadingHubProjects ? 'Loading...' : '— No link —' }}</option>
-              <option v-for="p in hubProjects" :key="p.id" :value="p.id">
-                {{ p.project_name }}{{ p.client_name ? ` · ${p.client_name}` : '' }}{{ p.status ? ` (${p.status})` : '' }}
-              </option>
-            </select>
-          </div>
-          <button
-            type="button"
-            @click="projectForm.add_to_hub = !projectForm.add_to_hub"
-            :style="projectForm.add_to_hub
-              ? 'width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 2px; border: 1px solid #B8C4A0; background: var(--positive-soft); cursor: pointer; font-family: var(--font-sans);'
-              : 'width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 2px; border: 1px solid var(--ink-5); background: var(--paper); cursor: pointer; font-family: var(--font-sans);'"
-          >
-            <svg v-if="projectForm.add_to_hub" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--positive)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            <svg v-else width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-            <span :style="projectForm.add_to_hub ? 'font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--positive);' : 'font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-3);'">
-              {{ projectForm.add_to_hub ? 'Added to Manu Hub' : 'Add to Manu Hub' }}
-            </span>
-          </button>
-
           <!-- Deliverables -->
           <div style="border: 1px solid var(--ink-5); border-radius: 2px; background: var(--paper); padding: 12px;">
             <label style="display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin-bottom: 10px;">Deliverables</label>
@@ -313,9 +286,11 @@
       v-if="selectedProject"
       :is-open="isDetailOpen"
       :project="selectedProject"
+      :refresh-token="cardRefreshToken"
       @close="isDetailOpen = false"
       @updated="fetchClients"
       @open-project="switchToProject"
+      @add-project="openAddProject"
     />
 
     <!-- CSV Import Modal -->
@@ -450,7 +425,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../lib/supabaseClient'
-import { hubSupabase } from '../lib/hubClient'
 import { useConfirmModal } from '../composables/useConfirmModal'
 import ProjectDetail from '../components/ProjectDetail.vue'
 
@@ -709,27 +683,18 @@ function resetImport() {
 
 const isDetailOpen = ref(false)
 const selectedProject = ref(null)
+// Bumped after creating a project so an open client card reloads its Projects tab.
+const cardRefreshToken = ref(0)
 
 const showAddProjectModal = ref(false)
 const isSavingProject = ref(false)
 const targetClient = ref(null)
-const projectForm = ref({ title: '', amount_paid: null, amount_owed: null, milestones: '', due_date: '', add_to_hub: false, hub_project_id: null, deliverable_trend_analysis: false, deliverable_trend_analysis_due: '', deliverable_design: false, deliverable_design_due: '', deliverable_branding: false, deliverable_branding_due: '', deliverable_tech_pack: false, deliverable_tech_pack_due: '', deliverable_product_dev: false, deliverable_manu_quotes_due: '', deliverable_initial_sample_due: '', deliverable_approved_sample_due: '', deliverable_size_range_due: '', deliverable_bulk_due: '', deliverable_product_analysis: false, deliverable_product_analysis_due: '', deliverable_in_house_patternmaking: false, deliverable_in_house_patternmaking_due: '', deliverable_in_house_proto: false, deliverable_in_house_proto_due: '', deliverable_in_house_manufacturing: false, deliverable_in_house_manufacturing_due: '' })
-const hubProjects = ref([])
-const loadingHubProjects = ref(false)
+const projectForm = ref({ title: '', amount_paid: null, amount_owed: null, milestones: '', deliverable_trend_analysis: false, deliverable_trend_analysis_due: '', deliverable_design: false, deliverable_design_due: '', deliverable_branding: false, deliverable_branding_due: '', deliverable_tech_pack: false, deliverable_tech_pack_due: '', deliverable_product_dev: false, deliverable_manu_quotes_due: '', deliverable_initial_sample_due: '', deliverable_approved_sample_due: '', deliverable_size_range_due: '', deliverable_bulk_due: '', deliverable_product_analysis: false, deliverable_product_analysis_due: '', deliverable_in_house_patternmaking: false, deliverable_in_house_patternmaking_due: '', deliverable_in_house_proto: false, deliverable_in_house_proto_due: '', deliverable_in_house_manufacturing: false, deliverable_in_house_manufacturing_due: '' })
 
-const openAddProject = async (client) => {
+const openAddProject = (client) => {
   targetClient.value = client
-  projectForm.value = { title: '', amount_paid: null, amount_owed: null, milestones: '', due_date: '', add_to_hub: false, hub_project_id: null, deliverable_trend_analysis: false, deliverable_trend_analysis_due: '', deliverable_design: false, deliverable_design_due: '', deliverable_branding: false, deliverable_branding_due: '', deliverable_tech_pack: false, deliverable_tech_pack_due: '', deliverable_product_dev: false, deliverable_manu_quotes_due: '', deliverable_initial_sample_due: '', deliverable_approved_sample_due: '', deliverable_size_range_due: '', deliverable_bulk_due: '', deliverable_product_analysis: false, deliverable_product_analysis_due: '', deliverable_in_house_patternmaking: false, deliverable_in_house_patternmaking_due: '', deliverable_in_house_proto: false, deliverable_in_house_proto_due: '', deliverable_in_house_manufacturing: false, deliverable_in_house_manufacturing_due: '' }
-  loadingHubProjects.value = true
+  projectForm.value = { title: '', amount_paid: null, amount_owed: null, milestones: '', deliverable_trend_analysis: false, deliverable_trend_analysis_due: '', deliverable_design: false, deliverable_design_due: '', deliverable_branding: false, deliverable_branding_due: '', deliverable_tech_pack: false, deliverable_tech_pack_due: '', deliverable_product_dev: false, deliverable_manu_quotes_due: '', deliverable_initial_sample_due: '', deliverable_approved_sample_due: '', deliverable_size_range_due: '', deliverable_bulk_due: '', deliverable_product_analysis: false, deliverable_product_analysis_due: '', deliverable_in_house_patternmaking: false, deliverable_in_house_patternmaking_due: '', deliverable_in_house_proto: false, deliverable_in_house_proto_due: '', deliverable_in_house_manufacturing: false, deliverable_in_house_manufacturing_due: '' }
   showAddProjectModal.value = true
-  const { data } = await hubSupabase.from('projects').select('id, project_name, client_name, status').order('created_at', { ascending: false })
-  hubProjects.value = data || []
-  loadingHubProjects.value = false
-}
-
-const onHubProjectSelect = () => {
-  const selected = hubProjects.value.find(p => p.id === projectForm.value.hub_project_id)
-  if (selected) projectForm.value.title = selected.project_name
 }
 
 const saveProject = async () => {
@@ -742,8 +707,6 @@ const saveProject = async () => {
       amount_paid: projectForm.value.amount_paid || 0,
       amount_owed: projectForm.value.amount_owed || 0,
       milestones: projectForm.value.milestones || null,
-      due_date: projectForm.value.due_date || null,
-      hub_project_id: projectForm.value.hub_project_id || null,
       deliverable_trend_analysis: projectForm.value.deliverable_trend_analysis,
       deliverable_trend_analysis_due: projectForm.value.deliverable_trend_analysis_due || null,
       deliverable_design: projectForm.value.deliverable_design,
@@ -768,16 +731,6 @@ const saveProject = async () => {
       deliverable_in_house_manufacturing_due: projectForm.value.deliverable_in_house_manufacturing_due || null,
     }]).select().single()
     if (error) throw error
-    if (projectForm.value.add_to_hub) {
-      const { data: newHubProject, error: hubError } = await hubSupabase
-        .from('projects')
-        .insert([{ project_name: newProj.title, client_name: targetClient.value.name || '', status: 'active' }])
-        .select('id')
-        .single()
-      if (!hubError && newHubProject) {
-        await supabase.from('projects').update({ hub_project_id: newHubProject.id }).eq('id', newProj.id)
-      }
-    }
     await supabase.from('activity_logs').insert({
       event_type: 'project_created',
       client_id: targetClient.value.id,
@@ -787,6 +740,8 @@ const saveProject = async () => {
       notes: 'Stage: Intake Form Received'
     })
     showAddProjectModal.value = false
+    await fetchClients()
+    cardRefreshToken.value++ // reload the open client card's Projects tab, if any
     await showAlert(`Project "${projectForm.value.title}" created and added to the pipeline.`, 'Project Created')
   } catch (err) {
     await showAlert(err.message, 'Error')

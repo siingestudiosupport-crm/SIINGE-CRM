@@ -109,7 +109,7 @@
           <section class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">Pipeline Stage</label>
-              <select v-model="localEdits.pipeline_stage" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium text-gray-800 transition-all shadow-sm">
+              <select v-model="localEdits.pipeline_stage" @change="onStageChange" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium text-gray-800 transition-all shadow-sm">
                 <option v-for="stage in stages" :key="stage" :value="stage">{{ stage }}</option>
               </select>
               <div v-if="hubStatus" style="margin-top: 7px; display: flex; align-items: center; gap: 6px;">
@@ -184,7 +184,21 @@
             <p style="font-size: 11px; color: var(--positive); margin: 8px 0 0; font-style: italic; line-height: 1.4;">The client will receive a follow-up request to review the project.</p>
           </section>
 
-          <section v-if="localEdits.pipeline_stage === 'Churn'" class="p-5 animate-fade-in space-y-3" style="background: var(--critical-soft); border: 1px solid var(--critical); border-radius: 4px;">
+          <!-- Saved loss reason — locked/read-only until the stage is changed away from Churn -->
+          <section v-if="localEdits.pipeline_stage === 'Churn' && lossReasonSaved" class="p-5 animate-fade-in space-y-3" style="background: var(--critical-soft); border: 1px solid var(--critical); border-radius: 4px;">
+            <div class="flex items-center gap-2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--critical)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+              <label style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--critical);">Reason for Loss</label>
+            </div>
+            <div style="width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--critical); border-radius: 4px; background: white; font-size: 13px; font-weight: 700; color: var(--critical);">
+              {{ localEdits.loss_reason }}
+            </div>
+            <div v-if="localEdits.loss_reason_notes" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--critical); border-radius: 4px; background: white; font-family: var(--font-sans); font-size: 12px; color: var(--ink); line-height: 1.5; white-space: pre-wrap;">
+              {{ localEdits.loss_reason_notes }}
+            </div>
+          </section>
+
+          <section v-if="localEdits.pipeline_stage === 'Churn' && !lossReasonSaved" class="p-5 animate-fade-in space-y-3" style="background: var(--critical-soft); border: 1px solid var(--critical); border-radius: 4px;">
             <div class="flex items-center gap-2">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--critical)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
               <label style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--critical);">Reason for Loss (Required)</label>
@@ -475,6 +489,15 @@
 
         <!-- PROJECTS TAB -->
         <div v-if="activeTab === 'Projects'" class="pb-20" style="display: flex; flex-direction: column; gap: 10px;">
+          <button
+            @click="emit('add-project', project?.client)"
+            style="width: 100%; font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 11px 16px; background: var(--ink); color: var(--paper); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer; transition: opacity 120ms; display: flex; align-items: center; justify-content: center; gap: 6px;"
+            @mouseenter="e => e.currentTarget.style.opacity = '0.85'"
+            @mouseleave="e => e.currentTarget.style.opacity = '1'"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            Add Project
+          </button>
           <div v-if="allClientProjects.length === 0" style="padding: 32px; text-align: center; color: var(--ink-4); font-size: 12px; font-style: italic;">
             No projects yet.
           </div>
@@ -749,10 +772,13 @@ import { createPortalToken, generatePortalLink } from '../utils/portalTokens'
 
 const props = defineProps({
   isOpen: Boolean,
-  project: Object
+  project: Object,
+  // Bumped by the parent after a project is created, so the client card's
+  // Projects tab reloads its list without reopening the card.
+  refreshToken: { type: Number, default: 0 }
 })
 
-const emit = defineEmits(['close', 'updated', 'open-project'])
+const emit = defineEmits(['close', 'updated', 'open-project', 'add-project'])
 const { confirm: showConfirm, alert: showAlert } = useConfirmModal()
 
 const defaultDeliverables = `Service Provider will deliver the following:\n• [INSERT DELIVERABLES]\n• [Be specific: outputs, formats, quantities]\n• [Include anything that defines scope clearly]\nAny work not expressly listed above is considered out of scope.`;
@@ -904,6 +930,17 @@ const buildLocalEdits = (p) => {
 // Copia local de los campos editables — nunca mutamos la prop directamente
 const localEdits = ref(buildLocalEdits(props.project))
 
+// A Churn project's loss reason locks (read-only) once saved. Selecting any
+// other stage clears it, so returning to Churn starts fresh and editable.
+const lossReasonSaved = ref(!!props.project?.loss_reason)
+const onStageChange = () => {
+  lossReasonSaved.value = false
+  if (localEdits.value.pipeline_stage !== 'Churn') {
+    localEdits.value.loss_reason = ''
+    localEdits.value.loss_reason_notes = ''
+  }
+}
+
 // Proposal value change history — parsed from the project's JSONB column.
 const parseProposalHistory = (p) => {
   if (!p?.proposal_value_history) return []
@@ -917,11 +954,15 @@ const parseProposalHistory = (p) => {
 const proposalHistory = ref(parseProposalHistory(props.project))
 const showProposalHistory = ref(false)
 
-const stages = [
-  'Directory View', 'Intake Form Received', 'Call Booked', 'Proposal Sent',
+const PIPELINE_STAGES = [
+  'Intake Form Received', 'Call Booked', 'Proposal Sent',
   'Contracts Signed', 'Invoice Paid', 'Project In Progress', 'Follow Up Needed',
   'Request Review', 'Project Complete', 'Future Project Opp', 'Churn'
 ]
+// 'Directory View' is an internal placeholder for clients that don't have a
+// project yet. It must NOT be selectable on a real project — the Pipeline board
+// has no Directory View column, so a project set to it disappears from the board.
+const stages = computed(() => props.project?.id ? PIPELINE_STAGES : ['Directory View', ...PIPELINE_STAGES])
 
 const clientProjects = ref(/** @type {any[]} */ ([]))
 const allClientProjects = ref(/** @type {any[]} */ ([]))
@@ -972,6 +1013,7 @@ watch(() => props.project?.id, async (newId, oldId) => {
   clientProjects.value = []
   if (newId && newId !== oldId && props.isOpen && props.project) {
     localEdits.value = buildLocalEdits(props.project)
+    lossReasonSaved.value = !!props.project.loss_reason
     proposalHistory.value = parseProposalHistory(props.project)
     selectedDocs.value = availableDocs.value
     fetchHubStatus()
@@ -985,6 +1027,7 @@ watch(() => props.project?.id, async (newId, oldId) => {
 watch(() => props.isOpen, (newVal) => {
   if (newVal && props.project) {
     localEdits.value = buildLocalEdits(props.project)
+    lossReasonSaved.value = !!props.project.loss_reason
     proposalHistory.value = parseProposalHistory(props.project)
     selectedDocs.value = availableDocs.value
     if (!props.project?.id) fetchClientProjects()
@@ -992,6 +1035,12 @@ watch(() => props.isOpen, (newVal) => {
     fetchHubStageDates()
   }
 }, { immediate: true })
+
+// Reload the client card's project list when the parent signals a new project
+// was created from the Add Project modal.
+watch(() => props.refreshToken, () => {
+  if (props.isOpen && !props.project?.id && props.project?.client_id) fetchClientProjects()
+})
 
 const activeDueDates = computed(() => {
   const today = new Date(); today.setHours(0,0,0,0)
@@ -1135,6 +1184,10 @@ const updateOverview = async () => {
 
     if (props.project.hub_project_id) {
       await hubSupabase.from('projects').update({ crm_stage: localEdits.value.pipeline_stage }).eq('id', props.project.hub_project_id)
+    }
+    // Lock the loss reason as read-only once it's saved on a Churn project.
+    if (localEdits.value.pipeline_stage === 'Churn' && localEdits.value.loss_reason) {
+      lossReasonSaved.value = true
     }
     flashSaved()
     emit('updated')
