@@ -9,3 +9,9 @@ entrypoint = "./functions/calendly-webhook/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/calendly-webhook/*.html" ]
+
+[functions.motion-webhook]
+enabled = true
+# Zapier can't send a Supabase JWT — auth is handled by MOTION_BOOKING_SECRET inside the function.
+verify_jwt = false
+entrypoint = "./functions/motion-webhook/index.ts"

@@ -82,11 +82,20 @@
 
         <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px;">
           <div>
+            <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:var(--ink-4);margin-bottom:6px;">Client</label>
+            <select v-model="addModal.clientId" @change="onClientSelected" style="width:100%;padding:8px 10px;border:1px solid var(--bone-edge);border-radius:2px;background:var(--paper);color:var(--ink);font-size:13px;font-family:inherit;cursor:pointer;">
+              <option :value="null">— Select client —</option>
+              <option v-for="c in clientsWithProjects" :key="c.id" :value="c.id">{{ c.name }}</option>
+            </select>
+          </div>
+
+          <div v-if="addModal.clientId">
             <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:var(--ink-4);margin-bottom:6px;">Project</label>
             <select v-model="addModal.projectId" @change="onProjectSelected" style="width:100%;padding:8px 10px;border:1px solid var(--bone-edge);border-radius:2px;background:var(--paper);color:var(--ink);font-size:13px;font-family:inherit;cursor:pointer;">
               <option :value="null">— Select project —</option>
-              <option v-for="p in allProjectsList" :key="p.id" :value="p.id">{{ p.title }} · {{ p.pipeline_stage }}</option>
+              <option v-for="p in clientProjects" :key="p.id" :value="p.id">{{ p.title }} · {{ p.pipeline_stage }}</option>
             </select>
+            <p v-if="clientProjects.length === 0" style="margin:6px 0 0;font-size:11px;color:var(--ink-4);font-style:italic;">This client has no projects yet.</p>
           </div>
 
           <div v-if="addModal.loadingProject" style="text-align:center;padding:12px;color:var(--ink-4);font-size:12px;font-style:italic;">Loading…</div>
@@ -157,7 +166,25 @@ const loading = ref(true)
 const isDetailOpen = ref(false)
 const selectedProject = ref(null)
 const allProjectsList = ref([])
-const addModal = ref({ show: false, date: '', projectId: null, saving: false, projectData: null, selectedField: 'due_date', loadingProject: false })
+const addModal = ref({ show: false, date: '', clientId: null, projectId: null, saving: false, projectData: null, selectedField: 'due_date', loadingProject: false })
+
+// Unique clients that have at least one project — for the Set Due Date modal.
+const clientsWithProjects = computed(() => {
+  const map = new Map()
+  for (const p of allProjectsList.value) {
+    if (!p.client_id || map.has(p.client_id)) continue
+    const client = Array.isArray(p.client) ? p.client[0] : p.client
+    map.set(p.client_id, { id: p.client_id, name: client?.name || 'Unknown Client' })
+  }
+  return [...map.values()].sort((a, b) => a.name.localeCompare(b.name))
+})
+
+// Projects belonging to the client selected in the modal.
+const clientProjects = computed(() =>
+  addModal.value.clientId
+    ? allProjectsList.value.filter(p => p.client_id === addModal.value.clientId)
+    : []
+)
 
 const today = new Date()
 const currentYear = ref(today.getFullYear())
@@ -329,10 +356,10 @@ const fetchEvents = async () => {
       }
     }
 
-    // Fetch all projects for the add-due-date modal
+    // Fetch all projects for the add-due-date modal (grouped by client)
     const { data: projectsList } = await supabase
       .from('projects')
-      .select('id, title, pipeline_stage')
+      .select('id, title, pipeline_stage, client_id, client:clients(name)')
       .order('title', { ascending: true })
     allProjectsList.value = projectsList || []
 
@@ -361,8 +388,18 @@ function handlePillClick(evt, nativeEvent) {
 function openAddModal(cell, preselectedProjectId = null) {
   const d = cell.date
   const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  addModal.value = { show: true, date: dateStr, projectId: preselectedProjectId, saving: false, projectData: null, selectedField: 'due_date', loadingProject: false }
+  const clientId = preselectedProjectId
+    ? (allProjectsList.value.find(p => p.id === preselectedProjectId)?.client_id || null)
+    : null
+  addModal.value = { show: true, date: dateStr, clientId, projectId: preselectedProjectId, saving: false, projectData: null, selectedField: 'due_date', loadingProject: false }
   if (preselectedProjectId) onProjectSelected()
+}
+
+// Reset the project pick when the client changes.
+function onClientSelected() {
+  addModal.value.projectId = null
+  addModal.value.projectData = null
+  addModal.value.selectedField = 'due_date'
 }
 
 function formatAddDate(dateStr) {

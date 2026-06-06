@@ -63,6 +63,10 @@
                   <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h14zM8.34 17V9.99H6V17h2.34zM7.17 8.92a1.36 1.36 0 100-2.71 1.36 1.36 0 000 2.71zM18 17v-3.85c0-2.05-1.1-3-2.56-3-1.18 0-1.71.65-2 1.1V9.99h-2.34V17h2.34v-3.7c0-.2.01-.4.07-.54.16-.4.52-.8 1.13-.8.8 0 1.12.6 1.12 1.49V17H18z"/></svg>
                   LinkedIn
                 </span>
+                <span v-if="client.lead_source === 'Motion'" style="display:inline-flex; align-items:center; gap:3px; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; padding: 2px 6px; border-radius: 2px; border: 1px solid #7c3aed; color: #7c3aed; background: rgba(124,58,237,0.08); white-space: nowrap;">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                  Upwork
+                </span>
               </div>
               <div style="font-size: 11px; color: var(--ink-4); margin-top: 2px;">{{ client.email }}</div>
               <div v-if="client.phone_number" style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--ink-3); margin-top: 4px; padding: 2px 6px; border: 1px solid var(--ink-5); border-radius: 2px;">
