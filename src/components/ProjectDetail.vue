@@ -870,6 +870,7 @@ const deliverableItems = [
   { label: 'In House Patternmaking',        model: 'deliverable_in_house_patternmaking', dueField: 'deliverable_in_house_patternmaking_due' },
   { label: 'In House Proto',               model: 'deliverable_in_house_proto', dueField: 'deliverable_in_house_proto_due' },
   { label: 'In House Manufacturing',        model: 'deliverable_in_house_manufacturing', dueField: 'deliverable_in_house_manufacturing_due' },
+  { label: 'Fitting Date',                  model: 'deliverable_fitting', dueField: 'deliverable_fitting_due' },
 ]
 
 const productDevelopmentDueFields = [
@@ -913,6 +914,8 @@ const buildLocalEdits = (p) => {
     deliverable_product_dev: p?.deliverable_product_dev || false,
     deliverable_manu_quotes_due: p?.deliverable_manu_quotes_due || '',
     deliverable_initial_sample_due: p?.deliverable_initial_sample_due || '',
+    deliverable_fitting: p?.deliverable_fitting || false,
+    deliverable_fitting_due: p?.deliverable_fitting_due || '',
     deliverable_approved_sample_due: p?.deliverable_approved_sample_due || '',
     deliverable_size_range_due: p?.deliverable_size_range_due || '',
     deliverable_bulk_due: p?.deliverable_bulk_due || '',
@@ -1157,6 +1160,8 @@ const updateOverview = async () => {
       deliverable_in_house_manufacturing_due: localEdits.value.deliverable_in_house_manufacturing_due || null,
       deliverable_manu_quotes_due: localEdits.value.deliverable_manu_quotes_due || null,
       deliverable_initial_sample_due: localEdits.value.deliverable_initial_sample_due || null,
+      deliverable_fitting: localEdits.value.deliverable_fitting,
+      deliverable_fitting_due: localEdits.value.deliverable_fitting_due || null,
       deliverable_approved_sample_due: localEdits.value.deliverable_approved_sample_due || null,
       deliverable_size_range_due: localEdits.value.deliverable_size_range_due || null,
       deliverable_bulk_due: localEdits.value.deliverable_bulk_due || null,
@@ -1609,6 +1614,7 @@ const getNextMilestone = (proj) => {
     { label: 'Product Analysis',        date: proj.deliverable_product_analysis && proj.deliverable_product_analysis_due },
     { label: 'Manu Quotes',             date: proj.deliverable_product_dev && proj.deliverable_manu_quotes_due },
     { label: 'Initial Sample',          date: proj.deliverable_product_dev && proj.deliverable_initial_sample_due },
+    { label: 'Fitting',                 date: proj.deliverable_fitting && proj.deliverable_fitting_due },
     { label: 'Approved Sample',         date: proj.deliverable_product_dev && proj.deliverable_approved_sample_due },
     { label: 'Size Range Approval',     date: proj.deliverable_product_dev && proj.deliverable_size_range_due },
     { label: 'Bulk',                    date: proj.deliverable_product_dev && proj.deliverable_bulk_due },

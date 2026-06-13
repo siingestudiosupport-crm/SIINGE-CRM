@@ -9,6 +9,7 @@ import Calendar from '../views/Calendar.vue'
 import FollowUps from '../views/FollowUps.vue'
 import Templates from '../views/Templates.vue'
 import ClientPortal from '../views/ClientPortal.vue'
+import Expenditures from '../views/Expenditures.vue'
 
 const routes = [
   {
@@ -19,6 +20,7 @@ const routes = [
       { path: 'pipeline', name: 'Pipeline', component: Pipeline },
       { path: 'clients', name: 'Clients', component: Clients },
       { path: 'calendar', name: 'Calendar', component: Calendar },
+      { path: 'expenditures', name: 'Expenditures', component: Expenditures },
       { path: 'follow-ups', name: 'FollowUps', component: FollowUps },
       { path: 'templates', name: 'Templates', component: Templates },
       { path: 'logs', name: 'Logs', component: Contracts }

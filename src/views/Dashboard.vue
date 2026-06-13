@@ -148,6 +148,84 @@
 
       </div>
 
+      <!-- Row 4: Expenditures -->
+      <div>
+        <!-- Section header -->
+        <div class="flex justify-between items-center" style="margin-bottom: 16px;">
+          <div>
+            <h2 style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0 0 2px;">Expenditures</h2>
+            <p style="font-size: 11px; color: var(--ink-4); margin: 0;">Costs within the selected period.</p>
+          </div>
+          <span style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-4); background: var(--paper-2); border: 1px solid var(--ink-5); border-radius: 2px; padding: 2px 5px;">{{ currentFilterLabel }}</span>
+        </div>
+
+        <!-- Expenditure KPI row -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
+          <div style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; padding: 20px 24px;">
+            <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0 0 8px;">Total Spent</p>
+            <p style="font-family: var(--font-display); font-style: italic; font-size: 36px; font-weight: 400; color: var(--critical); margin: 0; line-height: 1;">${{ kpiExpTotal.toLocaleString() }}</p>
+          </div>
+          <div style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; padding: 20px 24px;">
+            <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0 0 8px;">Sampling Costs</p>
+            <p style="font-family: var(--font-display); font-style: italic; font-size: 36px; font-weight: 400; color: var(--caution); margin: 0; line-height: 1;">${{ kpiExpProjects.toLocaleString() }}</p>
+          </div>
+          <div style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; padding: 20px 24px;">
+            <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0 0 8px;">Operation Costs</p>
+            <p style="font-family: var(--font-display); font-style: italic; font-size: 36px; font-weight: 400; color: var(--ink-3); margin: 0; line-height: 1;">${{ kpiExpOperation.toLocaleString() }}</p>
+          </div>
+        </div>
+
+        <!-- Breakdown tables side by side -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+          <!-- Projects breakdown -->
+          <div style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; padding: 24px;">
+            <h3 style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0 0 16px;">Sampling Costs</h3>
+            <div v-if="expProjectItems.length === 0" style="text-align: center; color: var(--ink-4); padding: 24px 0; font-size: 13px; font-style: italic;">No sampling costs in this period.</div>
+            <div v-else class="space-y-1">
+              <div v-for="item in expProjectItems" :key="item.id"
+                style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--bone-edge);">
+                <div style="min-width: 0;">
+                  <p style="font-size: 12px; font-weight: 500; color: var(--ink); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.description }}</p>
+                  <p style="font-size: 10px; color: var(--ink-4); margin: 2px 0 0; display: flex; gap: 8px;">
+                    <span>{{ formatExpDate(item.date) }}</span>
+                    <span v-if="item.category" style="color: var(--caution);">{{ item.category }}</span>
+                    <span v-if="item.project_name" style="color: var(--ink-3);">{{ item.project_name }}</span>
+                  </p>
+                </div>
+                <span style="font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--critical); white-space: nowrap; flex-shrink: 0;">${{ Number(item.amount).toLocaleString() }}</span>
+              </div>
+              <div style="display: flex; justify-content: flex-end; padding-top: 10px;">
+                <span style="font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--critical);">${{ kpiExpProjects.toLocaleString() }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Operation breakdown -->
+          <div style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; padding: 24px;">
+            <h3 style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; color: var(--ink-3); margin: 0 0 16px;">Operation</h3>
+            <div v-if="expOperationItems.length === 0" style="text-align: center; color: var(--ink-4); padding: 24px 0; font-size: 13px; font-style: italic;">No operation expenditures in this period.</div>
+            <div v-else class="space-y-1">
+              <div v-for="item in expOperationItems" :key="item.id"
+                style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--bone-edge);">
+                <div style="min-width: 0;">
+                  <p style="font-size: 12px; font-weight: 500; color: var(--ink); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.description }}</p>
+                  <p style="font-size: 10px; color: var(--ink-4); margin: 2px 0 0; display: flex; gap: 8px;">
+                    <span>{{ formatExpDate(item.date) }}</span>
+                    <span v-if="item.category" style="color: var(--ink-3);">{{ item.category }}</span>
+                  </p>
+                </div>
+                <span style="font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--critical); white-space: nowrap; flex-shrink: 0;">${{ Number(item.amount).toLocaleString() }}</span>
+              </div>
+              <div style="display: flex; justify-content: flex-end; padding-top: 10px;">
+                <span style="font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--critical);">${{ kpiExpOperation.toLocaleString() }}</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
     </div>
   </div>
 </template>
@@ -159,6 +237,7 @@ import { supabase } from '../lib/supabaseClient'
 const loading = ref(true)
 const projects = ref([])
 const clients = ref([])
+const expenditures = ref([])
 
 const filterPeriod = ref('month')
 const customStart = ref('')
@@ -192,14 +271,16 @@ const getDateRange = () => {
 const fetchData = async () => {
   try {
     loading.value = true
-    const [projectsRes, clientsRes] = await Promise.all([
+    const [projectsRes, clientsRes, expRes] = await Promise.all([
       supabase.from('projects').select('*').is('archived_at', null),
-      supabase.from('clients').select('*')
+      supabase.from('clients').select('*'),
+      supabase.from('expenditures').select('*').order('date', { ascending: false })
     ])
     if (projectsRes.error) throw projectsRes.error
     if (clientsRes.error) throw clientsRes.error
-    projects.value = projectsRes.data || []
-    clients.value  = clientsRes.data || []
+    projects.value     = projectsRes.data || []
+    clients.value      = clientsRes.data || []
+    expenditures.value = expRes.data || []
   } catch (error) {
     console.error('Dashboard fetch error:', error.message)
   } finally {
@@ -343,6 +424,44 @@ const clientTiers = computed(() => {
     { name: 'Early-stage', count: counts['Early-stage'], percentage: Math.round(counts['Early-stage'] / total * 100), color: 'var(--ink-4)' },
   ].filter(t => t.count > 0)
 })
+
+// === EXPENDITURES — period-aware ===
+const formatExpDate = (d) => {
+  if (!d) return '—'
+  const [y, m, day] = d.split('-')
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  return `${months[Number(m)-1]} ${Number(day)}, ${y}`
+}
+
+const expendituresInRange = computed(() => {
+  return expenditures.value.filter(e => {
+    if (!e.date) return false
+    const range = getDateRange()
+    if (!range) return true
+    const d = new Date(e.date + 'T00:00:00')
+    return d >= range.start && d <= range.end
+  })
+})
+
+const expProjectItems = computed(() => {
+  return expendituresInRange.value
+    .filter(e => e.category === 'Sampling Costs')
+    .map(e => ({
+      ...e,
+      project_name: e.project_id ? (projects.value.find(p => p.id === e.project_id)?.title || null) : null
+    }))
+    .sort((a, b) => b.date.localeCompare(a.date))
+})
+
+const expOperationItems = computed(() => {
+  return expendituresInRange.value
+    .filter(e => e.category !== 'Sampling Costs')
+    .sort((a, b) => b.date.localeCompare(a.date))
+})
+
+const kpiExpTotal     = computed(() => expendituresInRange.value.reduce((s, e) => s + Number(e.amount), 0))
+const kpiExpProjects  = computed(() => expProjectItems.value.reduce((s, e) => s + Number(e.amount), 0))
+const kpiExpOperation = computed(() => expOperationItems.value.reduce((s, e) => s + Number(e.amount), 0))
 
 onMounted(fetchData)
 </script>

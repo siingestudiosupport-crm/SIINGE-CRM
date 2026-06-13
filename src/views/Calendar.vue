@@ -126,6 +126,28 @@
       @close="isDetailOpen = false"
       @updated="fetchEvents"
     />
+
+    <!-- No Show modal -->
+    <div v-if="zoomModal.show" class="fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(14,14,12,0.5);" @click.self="zoomModal.show = false">
+      <div style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px; width: 100%; max-width: 400px; padding: 28px; box-shadow: 0 20px 60px rgba(14,14,12,0.3);">
+        <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: var(--ink-4); margin: 0 0 6px;">Scheduled Meeting</p>
+        <h3 style="font-family: var(--font-display); font-style: italic; font-weight: 400; font-size: 22px; color: var(--ink); margin: 0 0 4px;">{{ zoomModal.clientName }}</h3>
+        <p style="font-size: 12px; color: var(--ink-3); margin: 0 0 20px;">{{ zoomModal.meetingDate }}</p>
+        <div class="flex gap-3">
+          <button @click="zoomModal.show = false"
+            style="flex: 1; padding: 9px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; background: transparent; color: var(--ink-3); border: 1px solid var(--ink-5); border-radius: 2px; cursor: pointer;">
+            Close
+          </button>
+          <button @click="markNoShow"
+            style="flex: 1; padding: 9px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; background: var(--critical); color: var(--bone); border: 1px solid var(--critical); border-radius: 2px; cursor: pointer; transition: opacity 120ms;"
+            @mouseenter="e => e.currentTarget.style.opacity = '0.85'"
+            @mouseleave="e => e.currentTarget.style.opacity = '1'">
+            {{ zoomModal.saving ? 'Saving...' : 'No Show' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -142,6 +164,7 @@ const DELIVERABLE_FIELDS = [
   { label: 'Tech Pack',                      dueField: 'deliverable_tech_pack_due' },
   { label: 'Manu Quotes Due',                dueField: 'deliverable_manu_quotes_due' },
   { label: 'Initial Sample Due',             dueField: 'deliverable_initial_sample_due' },
+  { label: 'Fitting Date',                   dueField: 'deliverable_fitting_due' },
   { label: 'Approved Sample Due',            dueField: 'deliverable_approved_sample_due' },
   { label: 'Size Range Approval Due',        dueField: 'deliverable_size_range_due' },
   { label: 'Bulk Due',                       dueField: 'deliverable_bulk_due' },
@@ -216,7 +239,7 @@ const fetchEvents = async () => {
       .select(`id, title, due_date, pipeline_stage, client_id, client:clients(name),
         deliverable_trend_analysis_due, deliverable_design_due, deliverable_branding_due,
         deliverable_tech_pack_due, deliverable_manu_quotes_due, deliverable_initial_sample_due,
-        deliverable_approved_sample_due, deliverable_size_range_due, deliverable_bulk_due,
+        deliverable_fitting_due, deliverable_approved_sample_due, deliverable_size_range_due, deliverable_bulk_due,
         deliverable_product_analysis_due, deliverable_in_house_patternmaking_due,
         deliverable_in_house_proto_due, deliverable_in_house_manufacturing_due`)
       .order('title', { ascending: true })
@@ -527,9 +550,44 @@ const openProject = async (evt) => {
   }
 }
 
+const zoomModal = ref({ show: false, clientId: null, clientName: '', meetingDate: '', saving: false })
+
 const openZoom = (evt) => {
-  // For now, just log. Can be extended to open zoom details
-  console.log('Opening zoom meeting:', evt.originalData)
+  const d = new Date(evt.date)
+  zoomModal.value = {
+    show: true,
+    clientId:    evt.originalData?.id || null,
+    clientName:  evt.label,
+    meetingDate: d.toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }),
+    saving: false,
+  }
+}
+
+const markNoShow = async () => {
+  if (!zoomModal.value.clientId || zoomModal.value.saving) return
+  zoomModal.value.saving = true
+  try {
+    await supabase.from('clients').update({ scheduled_date: null, meeting_link: null }).eq('id', zoomModal.value.clientId)
+    const dueAt = new Date()
+    dueAt.setHours(dueAt.getHours() + 1)
+    await supabase.from('email_queue').insert({
+      client_id:    zoomModal.value.clientId,
+      client_name:  zoomModal.value.clientName,
+      trigger_type: 'no_show',
+      due_at:       dueAt.toISOString(),
+    })
+    await supabase.from('activity_logs').insert({
+      event_type: 'no_show',
+      client_id:  zoomModal.value.clientId,
+      notes:      'Client did not show up to scheduled meeting. No-show email queued.',
+    })
+    zoomModal.value.show = false
+    await fetchEvents()
+  } catch (err) {
+    console.error('No show error:', err.message)
+  } finally {
+    zoomModal.value.saving = false
+  }
 }
 
 onMounted(fetchEvents)

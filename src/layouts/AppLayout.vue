@@ -34,6 +34,11 @@
           <span>Calendar</span>
         </router-link>
 
+        <router-link to="/expenditures" class="siinge-nav-link" active-class="siinge-nav-active">
+          <TrendingDown :size="15" />
+          <span>Expenditures</span>
+        </router-link>
+
         <!-- Divider -->
         <div style="height: 1px; background: rgba(250,247,242,0.08); margin: 8px 0;"></div>
 
@@ -162,7 +167,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { Gauge, Kanban, Users, FileText, CalendarDays, Bell, Mail } from 'lucide-vue-next'
+import { Gauge, Kanban, Users, FileText, CalendarDays, Bell, Mail, TrendingDown } from 'lucide-vue-next'
 import { supabase } from '../lib/supabaseClient'
 
 const TRIGGER_META = {
@@ -172,6 +177,7 @@ const TRIGGER_META = {
   call_completed_24h: { label: 'Post-Call Nudge',     color: 'var(--info)'     },
   cold_30d:           { label: 'Cold Re-engagement',  color: 'var(--ink-3)'    },
   review_request:     { label: 'Request Review',      color: 'var(--positive)' },
+  no_show:            { label: 'No Show',             color: 'var(--critical)' },
 }
 
 const notifications = ref([])

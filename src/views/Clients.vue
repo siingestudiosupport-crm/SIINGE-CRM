@@ -102,6 +102,13 @@
             </td>
             <td style="padding: 14px 16px; text-align: center;">
               <div class="flex justify-center gap-2" @click.stop>
+                <button v-if="client.scheduled_date" @click="markNoShow(client)"
+                  style="padding: 4px 8px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--critical); background: none; border: 1px solid rgba(194,65,12,0.3); border-radius: 2px; cursor: pointer; transition: all 120ms; white-space: nowrap;"
+                  @mouseenter="e=>{ e.currentTarget.style.background='var(--critical)'; e.currentTarget.style.color='var(--bone)'; }"
+                  @mouseleave="e=>{ e.currentTarget.style.background='none'; e.currentTarget.style.color='var(--critical)'; }"
+                  title="Mark as No Show">
+                  No Show
+                </button>
                 <button @click="openAddProject(client)" style="padding: 6px; color: var(--ink-4); background: none; border: none; cursor: pointer; border-radius: 2px; transition: color 120ms;" @mouseenter="e=>e.currentTarget.style.color='var(--positive)'" @mouseleave="e=>e.currentTarget.style.color='var(--ink-4)'" title="Add Project">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 </button>
@@ -861,6 +868,36 @@ const saveClient = async () => {
   } catch (err) {
     await showAlert(err.message, 'Error')
   } finally { isSubmitting.value = false }
+}
+
+const markNoShow = async (client) => {
+  const confirmed = await showConfirm({
+    title: 'Mark as No Show',
+    message: `${client.name} didn't show up to their meeting? This will clear the scheduled date and queue a no-show follow-up email.`,
+    confirmText: 'Mark No Show',
+    cancelText: 'Cancel',
+    isDangerous: false
+  })
+  if (!confirmed) return
+  try {
+    await supabase.from('clients').update({ scheduled_date: null, meeting_link: null }).eq('id', client.id)
+    const dueAt = new Date()
+    dueAt.setHours(dueAt.getHours() + 1)
+    await supabase.from('email_queue').insert({
+      client_id:    client.id,
+      client_name:  client.name,
+      trigger_type: 'no_show',
+      due_at:       dueAt.toISOString(),
+    })
+    await supabase.from('activity_logs').insert({
+      event_type: 'no_show',
+      client_id:  client.id,
+      notes:      'Client did not show up to scheduled meeting. No-show email queued.',
+    })
+    fetchClients()
+  } catch (err) {
+    await showAlert(err.message, 'Error')
+  }
 }
 
 const confirmDelete = async (client) => {
