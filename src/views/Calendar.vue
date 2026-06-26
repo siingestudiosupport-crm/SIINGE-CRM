@@ -107,6 +107,11 @@
               <option v-for="f in DELIVERABLE_FIELDS" :key="f.dueField" :value="f.dueField">{{ f.label }}</option>
             </select>
           </div>
+
+          <div v-if="addModal.projectData && !addModal.loadingProject">
+            <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:var(--ink-4);margin-bottom:6px;">Notes</label>
+            <textarea v-model="addModal.dueDateNotes[addModal.selectedField]" rows="3" placeholder="Notes for this due date..." style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--bone-edge);border-radius:2px;background:var(--paper);color:var(--ink);font-size:13px;font-family:inherit;resize:vertical;line-height:1.5;outline:none;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--bone-edge)'"></textarea>
+          </div>
         </div>
 
         <div style="padding:16px 24px;border-top:1px solid var(--bone-edge);display:flex;gap:8px;justify-content:flex-end;background:var(--paper-2);flex-shrink:0;">
@@ -189,7 +194,7 @@ const loading = ref(true)
 const isDetailOpen = ref(false)
 const selectedProject = ref(null)
 const allProjectsList = ref([])
-const addModal = ref({ show: false, date: '', clientId: null, projectId: null, saving: false, projectData: null, selectedField: 'due_date', loadingProject: false })
+const addModal = ref({ show: false, date: '', clientId: null, projectId: null, saving: false, projectData: null, selectedField: 'due_date', loadingProject: false, dueDateNotes: {} })
 
 // Unique clients that have at least one project — for the Set Due Date modal.
 const clientsWithProjects = computed(() => {
@@ -414,7 +419,7 @@ function openAddModal(cell, preselectedProjectId = null) {
   const clientId = preselectedProjectId
     ? (allProjectsList.value.find(p => p.id === preselectedProjectId)?.client_id || null)
     : null
-  addModal.value = { show: true, date: dateStr, clientId, projectId: preselectedProjectId, saving: false, projectData: null, selectedField: 'due_date', loadingProject: false }
+  addModal.value = { show: true, date: dateStr, clientId, projectId: preselectedProjectId, saving: false, projectData: null, selectedField: 'due_date', loadingProject: false, dueDateNotes: {} }
   if (preselectedProjectId) onProjectSelected()
 }
 
@@ -433,19 +438,22 @@ function formatAddDate(dateStr) {
 
 async function onProjectSelected() {
   const id = addModal.value.projectId
-  if (!id) { addModal.value.projectData = null; return }
+  if (!id) { addModal.value.projectData = null; addModal.value.dueDateNotes = {}; return }
   addModal.value.loadingProject = true
-  const { data } = await supabase.from('projects').select('id').eq('id', id).single()
+  const { data } = await supabase.from('projects').select('id, due_date_notes').eq('id', id).single()
   addModal.value.projectData = data
   addModal.value.selectedField = 'due_date'
+  addModal.value.dueDateNotes = data?.due_date_notes || {}
   addModal.value.loadingProject = false
 }
 
 async function saveAddModal() {
   if (!addModal.value.projectData || !addModal.value.selectedField) return
   addModal.value.saving = true
+  const notes = { ...addModal.value.dueDateNotes }
+  if (!notes[addModal.value.selectedField]) delete notes[addModal.value.selectedField]
   await supabase.from('projects')
-    .update({ [addModal.value.selectedField]: addModal.value.date })
+    .update({ [addModal.value.selectedField]: addModal.value.date, due_date_notes: notes })
     .eq('id', addModal.value.projectId)
   addModal.value.show = false
   addModal.value.saving = false
@@ -567,7 +575,6 @@ const markNoShow = async () => {
   if (!zoomModal.value.clientId || zoomModal.value.saving) return
   zoomModal.value.saving = true
   try {
-    await supabase.from('clients').update({ scheduled_date: null, meeting_link: null }).eq('id', zoomModal.value.clientId)
     const dueAt = new Date()
     dueAt.setHours(dueAt.getHours() + 1)
     await supabase.from('email_queue').insert({
@@ -579,7 +586,7 @@ const markNoShow = async () => {
     await supabase.from('activity_logs').insert({
       event_type: 'no_show',
       client_id:  zoomModal.value.clientId,
-      notes:      'Client did not show up to scheduled meeting. No-show email queued.',
+      notes:      `No-show recorded. Original meeting was scheduled for: ${zoomModal.value.meetingDate}.`,
     })
     zoomModal.value.show = false
     await fetchEvents()

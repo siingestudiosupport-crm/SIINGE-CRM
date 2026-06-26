@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="flex flex-col h-full relative" style="background: var(--bone); border: 1px solid var(--bone-edge); border-radius: 4px;">
 
     <!-- Page header -->
@@ -85,7 +85,7 @@
             <td style="padding: 14px 16px;">
               <div class="flex flex-col gap-1">
                 <span v-if="client.nda_status" :style="getStatusChipStyle(client.nda_status)">NDA: {{ client.nda_status }}</span>
-                <span v-for="proj in client.projects?.filter(p => p.sow_status)" :key="`${client.id}-${proj.id}`" :style="getStatusChipStyle(proj.sow_status)" style="font-size: 10px;">
+                <span v-for="proj in client.projects?.filter(p => p.sow_status)" :key="client.id + '-' + proj.id" :style="getStatusChipStyle(proj.sow_status)" style="font-size: 10px;">
                   SOW ({{ proj.title }}): {{ proj.sow_status }}
                 </span>
               </div>
@@ -428,6 +428,43 @@
           <button v-if="importModal.step === 4 && !importRunning" @click="resetImport" style="padding:7px 16px;border:none;border-radius:2px;background:var(--ink);color:var(--paper);font-size:13px;font-weight:600;cursor:pointer;">Done</button>
         </div>
 
+      </div>
+    </div>
+
+    <!-- No Show Email Modal -->
+    <div v-if="noShowEmailModal.show" style="position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(14,14,12,0.5);" @click.self="noShowEmailModal.show = false">
+      <div style="background:var(--bone);border:1px solid var(--bone-edge);border-radius:4px;box-shadow:var(--shadow-3);width:90%;max-width:540px;display:flex;flex-direction:column;overflow:hidden;max-height:90vh;">
+        <div style="padding:18px 24px;border-bottom:1px solid var(--bone-edge);display:flex;justify-content:space-between;align-items:center;background:var(--paper-2);flex-shrink:0;">
+          <div>
+            <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.16em;color:var(--ink-4);margin:0 0 3px;">No Show Logged</p>
+            <h3 style="font-family:var(--font-display);font-style:italic;font-weight:400;font-size:20px;color:var(--ink);margin:0;letter-spacing:-0.02em;">Send follow-up email?</h3>
+          </div>
+          <button @click="noShowEmailModal.show = false" style="background:none;border:none;font-size:20px;color:var(--ink-4);cursor:pointer;line-height:1;padding:0;">&times;</button>
+        </div>
+
+        <div style="padding:20px 24px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;">
+          <div style="border-bottom:1px solid var(--bone-edge);padding-bottom:10px;display:grid;grid-template-columns:60px 1fr;align-items:center;">
+            <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:var(--ink-4);">To</span>
+            <input v-model="noShowEmailModal.clientEmail" type="email" style="font-size:13px;font-weight:600;color:var(--ink);background:transparent;border:none;outline:none;width:100%;" />
+          </div>
+          <div style="border-bottom:1px solid var(--bone-edge);padding-bottom:10px;display:grid;grid-template-columns:60px 1fr;align-items:center;">
+            <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:var(--ink-4);">Subject</span>
+            <input v-model="noShowEmailModal.subject" type="text" style="font-size:13px;font-weight:600;color:var(--ink);background:transparent;border:none;outline:none;width:100%;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:var(--ink-4);margin-bottom:8px;">Message</label>
+            <textarea v-model="noShowEmailModal.body" rows="9" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid var(--ink-5);border-radius:2px;font-family:var(--font-sans);font-size:13px;color:var(--ink-2);background:var(--paper);outline:none;resize:vertical;line-height:1.7;" @focus="e=>e.target.style.borderColor='var(--ink)'" @blur="e=>e.target.style.borderColor='var(--ink-5)'"></textarea>
+          </div>
+        </div>
+
+        <div style="padding:14px 24px;border-top:1px solid var(--bone-edge);display:flex;gap:8px;justify-content:flex-end;background:var(--paper-2);flex-shrink:0;">
+          <button @click="noShowEmailModal.show = false" style="padding:7px 16px;border:1px solid var(--bone-edge);border-radius:2px;background:transparent;color:var(--ink-3);font-size:13px;cursor:pointer;">Skip</button>
+          <button @click="sendNoShowEmail" :disabled="!noShowEmailModal.clientEmail || noShowEmailModal.sending"
+            style="padding:7px 16px;border:none;border-radius:2px;background:var(--ink);color:var(--paper);font-size:13px;font-weight:600;cursor:pointer;transition:opacity 120ms;"
+            :style="(!noShowEmailModal.clientEmail || noShowEmailModal.sending) ? 'opacity:0.4;cursor:not-allowed;' : ''">
+            {{ noShowEmailModal.sending ? 'Sending…' : 'Send Email' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -870,33 +907,78 @@ const saveClient = async () => {
   } finally { isSubmitting.value = false }
 }
 
+const noShowEmailModal = ref({ show: false, clientId: null, clientEmail: '', subject: '', body: '', queueItemId: null, sending: false })
+
 const markNoShow = async (client) => {
   const confirmed = await showConfirm({
     title: 'Mark as No Show',
-    message: `${client.name} didn't show up to their meeting? This will clear the scheduled date and queue a no-show follow-up email.`,
+    message: `${client.name} didn't show up to their meeting? This will log the no-show and let you send a follow-up email.`,
     confirmText: 'Mark No Show',
     cancelText: 'Cancel',
     isDangerous: false
   })
   if (!confirmed) return
   try {
-    await supabase.from('clients').update({ scheduled_date: null, meeting_link: null }).eq('id', client.id)
+    const meetingDate = client.scheduled_date
+      ? new Date(client.scheduled_date).toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+      : 'Unknown date'
     const dueAt = new Date()
     dueAt.setHours(dueAt.getHours() + 1)
-    await supabase.from('email_queue').insert({
-      client_id:    client.id,
-      client_name:  client.name,
-      trigger_type: 'no_show',
-      due_at:       dueAt.toISOString(),
-    })
-    await supabase.from('activity_logs').insert({
-      event_type: 'no_show',
-      client_id:  client.id,
-      notes:      'Client did not show up to scheduled meeting. No-show email queued.',
-    })
+    const [{ data: queueRow }] = await Promise.all([
+      supabase.from('email_queue').insert({
+        client_id:    client.id,
+        client_name:  client.name,
+        trigger_type: 'no_show',
+        due_at:       dueAt.toISOString(),
+      }).select('id').single(),
+      supabase.from('activity_logs').insert({
+        event_type: 'no_show',
+        client_id:  client.id,
+        notes:      `No-show recorded. Meeting was scheduled for: ${meetingDate}.`,
+      }),
+      supabase.from('clients').update({
+        no_show_date:   client.scheduled_date,
+        scheduled_date: null,
+      }).eq('id', client.id),
+    ])
+    const { data: tpl } = await supabase.from('email_templates').select('subject, body').eq('trigger_type', 'no_show').single()
+    const clientName = client.name || 'there'
+    const primaryIssue = client.primary_issue
+      ? client.primary_issue.toLowerCase().replace(/\.$/, '')
+      : `the challenges you've been facing`
+    noShowEmailModal.value = {
+      show: true,
+      clientId: client.id,
+      clientEmail: client.email || '',
+      subject: (tpl?.subject || 'We missed you').replace(/\[Client Name\]/g, clientName),
+      body: (tpl?.body || '').replace(/\[Client Name\]/g, clientName).replace(/\[Primary Issue\]/g, primaryIssue),
+      queueItemId: queueRow?.id || null,
+      sending: false,
+    }
     fetchClients()
   } catch (err) {
     await showAlert(err.message, 'Error')
+  }
+}
+
+const sendNoShowEmail = async () => {
+  const m = noShowEmailModal.value
+  if (!m.clientEmail || m.sending) return
+  m.sending = true
+  try {
+    const bodyHtml = m.body.split('\n').map(l => l.trim() ? `<p style="font-family:sans-serif;color:#374151;margin:0 0 8px;">${l}</p>` : '').join('')
+    const { error } = await supabase.functions.invoke('send-email', {
+      body: { to: m.clientEmail, subject: m.subject, html: bodyHtml, client_id: m.clientId, doc_type: 'followup', queue_item_id: m.queueItemId }
+    })
+    if (error) throw error
+    if (m.queueItemId) {
+      await supabase.from('email_queue').update({ sent_at: new Date().toISOString() }).eq('id', m.queueItemId)
+    }
+    noShowEmailModal.value.show = false
+  } catch (err) {
+    await showAlert('Error sending email: ' + err.message, 'Error')
+  } finally {
+    m.sending = false
   }
 }
 
