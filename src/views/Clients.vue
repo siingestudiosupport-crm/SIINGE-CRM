@@ -102,7 +102,7 @@
             </td>
             <td style="padding: 14px 16px; text-align: center;">
               <div class="flex justify-center gap-2" @click.stop>
-                <button v-if="client.scheduled_date" @click="markNoShow(client)"
+                <button @click="markNoShow(client)"
                   style="padding: 4px 8px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--critical); background: none; border: 1px solid rgba(194,65,12,0.3); border-radius: 2px; cursor: pointer; transition: all 120ms; white-space: nowrap;"
                   @mouseenter="e=>{ e.currentTarget.style.background='var(--critical)'; e.currentTarget.style.color='var(--bone)'; }"
                   @mouseleave="e=>{ e.currentTarget.style.background='none'; e.currentTarget.style.color='var(--critical)'; }"
@@ -118,6 +118,14 @@
                 <button @click="confirmDelete(client)" style="padding: 6px; color: var(--ink-4); background: none; border: none; cursor: pointer; border-radius: 2px; transition: color 120ms;" @mouseenter="e=>e.currentTarget.style.color='var(--critical)'" @mouseleave="e=>e.currentTarget.style.color='var(--ink-4)'" title="Delete">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
+              </div>
+              <div v-if="client.scheduled_date || client.no_show_date" style="margin-top: 6px; font-size: 10px; font-family: var(--font-mono); color: var(--ink-4); text-align: center;">
+                <span v-if="client.scheduled_date">
+                  {{ new Date(client.scheduled_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
+                </span>
+                <span v-else-if="client.no_show_date" style="color: var(--critical); opacity: 0.7;">
+                  No-show: {{ new Date(client.no_show_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
+                </span>
               </div>
             </td>
           </tr>
@@ -508,6 +516,14 @@ const PRIMARY_ISSUE_OPTIONS = [
   'Missing or incomplete technical documentation (tech packs, specs, grading)',
   'Internal bandwidth is limited and we need a partner to take ownership',
 ]
+
+const PRIMARY_ISSUE_EMAIL_PHRASE = {
+  'Fit or quality issues are leading to returns or customer dissatisfaction': 'fit or quality issues',
+  'Development is slow, inconsistent, or becoming too costly':               'development',
+  'Difficulty sourcing or managing reliable manufacturers':                   'sourcing or managing reliable manufacturers',
+  'Missing or incomplete technical documentation (tech packs, specs, grading)': 'tech packs, specs or grading',
+  'Internal bandwidth is limited and we need a partner to take ownership':    'product development and manufacturing',
+}
 
 // Keep a client's existing (possibly legacy/free-text) value selectable so
 // editing an old client doesn't silently wipe data that predates these dropdowns.
@@ -944,7 +960,7 @@ const markNoShow = async (client) => {
     const { data: tpl } = await supabase.from('email_templates').select('subject, body').eq('trigger_type', 'no_show').single()
     const clientName = client.name || 'there'
     const primaryIssue = client.primary_issue
-      ? client.primary_issue.toLowerCase().replace(/\.$/, '')
+      ? (PRIMARY_ISSUE_EMAIL_PHRASE[client.primary_issue] ?? client.primary_issue.toLowerCase().replace(/\.$/, ''))
       : `the challenges you've been facing`
     noShowEmailModal.value = {
       show: true,
