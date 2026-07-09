@@ -856,6 +856,8 @@ const openClientDetail = (client) => {
     client_id: client.id,
     pipeline_stage: client.pipeline_stage || 'Directory View',
     internal_notes: client.internal_notes || '',
+    loss_reason: client.loss_reason || '',
+    loss_reason_notes: client.loss_reason_notes || '',
     created_at: client.created_at,
     scheduled_date: client.scheduled_date,
     meeting_link: client.meeting_link
