@@ -62,6 +62,25 @@ serve(async (req) => {
     }
     // Claim succeeded — we are the one send for today.
 
+    // ── 0b. Kill any leftover *scheduled* Resend digest from the old design ────
+    // A previous version scheduled digests in Resend and stored the id here.
+    // If one is still pending it would fire on its own and duplicate today's
+    // email — cancel it (best-effort) and clear the pointer.
+    // ponytail: cancels only the last stored id, not every historical schedule.
+    // If same-day copies persist, purge remaining scheduled emails in Resend.
+    const { data: leftover } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'digest_resend_id')
+      .maybeSingle()
+    if (leftover?.value) {
+      await fetch(`https://api.resend.com/emails/${leftover.value}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${RESEND_API_KEY}` },
+      }).catch(() => {})
+      await supabase.from('app_settings').update({ value: null }).eq('key', 'digest_resend_id')
+    }
+
     // ── 1. Fetch pending follow-up items ──────────────────────────────────────
     const { data: allPending } = await supabase
       .from('email_queue')

@@ -119,14 +119,6 @@
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
               </div>
-              <div v-if="client.scheduled_date || client.no_show_date" style="margin-top: 6px; font-size: 10px; font-family: var(--font-mono); color: var(--ink-4); text-align: center;">
-                <span v-if="client.scheduled_date">
-                  {{ new Date(client.scheduled_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
-                </span>
-                <span v-else-if="client.no_show_date" style="color: var(--critical); opacity: 0.7;">
-                  No-show: {{ new Date(client.no_show_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
-                </span>
-              </div>
             </td>
           </tr>
         </tbody>
@@ -770,6 +762,7 @@ const saveProject = async () => {
       pipeline_stage: 'Intake Form Received',
       amount_paid: projectForm.value.amount_paid || 0,
       amount_owed: projectForm.value.amount_owed || 0,
+      proposal_value: (Number(projectForm.value.amount_paid) || 0) + (Number(projectForm.value.amount_owed) || 0),
       milestones: projectForm.value.milestones || null,
       deliverable_trend_analysis: projectForm.value.deliverable_trend_analysis,
       deliverable_trend_analysis_due: projectForm.value.deliverable_trend_analysis_due || null,

@@ -219,6 +219,9 @@
             <div class="p-4 bg-gray-50 rounded-xl border border-gray-100 flex flex-col justify-center shadow-sm">
               <p class="text-[10px] font-bold text-gray-400 uppercase mb-2">Meeting Date</p>
               <input v-model="localEdits.scheduled_date" type="datetime-local" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none text-gray-800 font-medium transition-all shadow-sm" />
+              <p v-if="project.client?.no_show_date" class="mt-1 text-[10px] font-mono" style="color: var(--critical); opacity: 0.75;">
+                No-show: {{ new Date(project.client.no_show_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
+              </p>
               <a v-if="project.meeting_link" :href="project.meeting_link" target="_blank" class="mt-2 w-max inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all shadow hover:shadow-md">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                 Join Meeting
@@ -1216,9 +1219,15 @@ const updateClientCard = async () => {
       internal_notes: localEdits.value.internal_notes || null,
       client_tier: localEdits.value.client_tier || null,
       scheduled_date: localEdits.value.scheduled_date || null,
+      loss_reason: localEdits.value.pipeline_stage === 'Churn' ? localEdits.value.loss_reason : null,
+      loss_reason_notes: localEdits.value.pipeline_stage === 'Churn' ? localEdits.value.loss_reason_notes : null,
     }
     const { error } = await supabase.from('clients').update(updates).eq('id', props.project.client_id)
     if (error) throw error
+    // Lock the loss reason as read-only once it's saved, same as project mode.
+    if (localEdits.value.pipeline_stage === 'Churn' && localEdits.value.loss_reason) {
+      lossReasonSaved.value = true
+    }
     flashSaved()
     emit('updated')
   } catch (e) {

@@ -39,3 +39,9 @@ ALTER TABLE projects
   ADD COLUMN IF NOT EXISTS description text,
   ADD COLUMN IF NOT EXISTS created_at timestamp DEFAULT now(),
   ADD COLUMN IF NOT EXISTS updated_at timestamp DEFAULT now();
+
+-- Add columns used in ProjectDetail.vue's client-card mode (clients with no
+-- project yet) — loss_reason/loss_reason_notes previously only existed on projects.
+ALTER TABLE clients
+  ADD COLUMN IF NOT EXISTS loss_reason text,
+  ADD COLUMN IF NOT EXISTS loss_reason_notes text;
