@@ -19,7 +19,28 @@ serve(async (req) => {
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
     const todayUTC = new Date().toISOString().split('T')[0] // "YYYY-MM-DD"
 
-    // ── 0. Atomic daily guard ─────────────────────────────────────────────────
+    // ── 0. Hour gate — the digest only ever goes out at 07:00 Eastern ─────────
+    // Cron fires at 11:00 and 12:00 UTC; exactly one of those is 07:00 in
+    // America/New_York (11:00 in EDT, 12:00 in EST), so this survives DST
+    // without touching the schedule twice a year.
+    // It runs BEFORE the daily guard on purpose: any stray invocation (DB
+    // webhook, manual test, leftover Resend schedule) is a silent no-op that
+    // neither emails anyone nor claims the day, so the real 07:00 digest still
+    // fires. `force` is the escape hatch for testing on demand.
+    const hourET = Number(new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York', hour: 'numeric', hour12: false,
+    }).format(new Date()))
+    const { force } = await req.json().catch(() => ({}))
+
+    if (hourET !== 7 && !force) {
+      console.log(`Skipping — ${hourET}:00 ET, digest only runs at 07:00 ET.`)
+      return new Response(
+        JSON.stringify({ ok: true, note: `skipped — ${hourET}:00 ET, digest only runs at 07:00 ET` }),
+        { headers: { 'Content-Type': 'application/json' }, status: 200 }
+      )
+    }
+
+    // ── 0a. Atomic daily guard ────────────────────────────────────────────────
     // Step A: try to claim ownership by updating the row only if it has a different date.
     // PostgreSQL row-level locking makes this safe against concurrent calls.
     const { data: claimed } = await supabase
