@@ -1385,14 +1385,16 @@ const downloadDocs = async () => {
 
     if (selectedDocs.value.includes('SOW')) {
       const studioSignatureBase64 = await fetchBase64('/signature.png').catch(() => null)
+      // Everything the client fills in by hand is left blank on purpose — we only
+      // print our own side (studio signature + dates).
       const blob = await getSOWPdfBlob({
         date_1: today,
-        date_2: '', // client's signing date, left for them to fill in
+        date_2: '',
         date_3: today,
-        full_address: props.project.client.full_address || '',
-        business_name: props.project.client.business_name || props.project.client.company || '',
-        client_name: props.project.client.name || '',
-        client_title: props.project.client.title || '',
+        full_address: '',
+        business_name: '',
+        client_name: '',
+        client_title: '',
         deliverables: localEdits.value.sow_deliverables,
         timeline: localEdits.value.sow_timeline,
         fees_payment: localEdits.value.sow_fees_payment,

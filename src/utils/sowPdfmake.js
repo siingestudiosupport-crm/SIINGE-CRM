@@ -1,4 +1,10 @@
-const buildDocDefinition = (data) => {
+// Hand-writing space for the blanks the client fills in. An underscore run can't be
+// broken mid-word, so it wraps onto its own line rather than overflowing.
+const BLANK_SHORT = '___________'
+const BLANK_PARTY = '_'.repeat(40)
+const BLANK_ADDRESS = '_'.repeat(88)
+
+export const buildDocDefinition = (data) => {
   const {
     date_1, date_2, date_3,
     full_address, business_name,
@@ -12,14 +18,16 @@ const buildDocDefinition = (data) => {
     sectionHeader:{ fontSize: 12, bold: true, margin: [0, 14, 0, 5] },
     body:         { fontSize: 11, lineHeight: 1.5, margin: [0, 0, 0, 4] },
     fieldBlock:   { fontSize: 11, lineHeight: 1.5, margin: [0, 0, 0, 2] },
-    sigLabel:     { fontSize: 11, bold: true, margin: [0, 0, 0, 10] },
-    sigFieldLabel:{ fontSize: 9,  color: '#666666', margin: [0, 0, 0, 2] },
-    sigFieldValue:{ fontSize: 11, margin: [0, 0, 0, 10] },
+    sigLabel:     { fontSize: 11, bold: true, margin: [0, 0, 0, 6] },
+    sigFieldLabel:{ fontSize: 9,  color: '#666666', margin: [0, 0, 0, 1] },
+    // Doubles as the hand-writing space when the field is left blank, so it keeps
+    // a little room below the text even though nothing is printed there.
+    sigFieldValue:{ fontSize: 11, margin: [0, 0, 0, 3] },
   }
 
   const hline = (w = 220) => ({
     canvas: [{ type: 'line', x1: 0, y1: 0, x2: w, y2: 0, lineWidth: 0.5 }],
-    margin: [0, 0, 0, 8]
+    margin: [0, 0, 0, 5]
   })
 
   const multiline = (text) => {
@@ -47,16 +55,18 @@ const buildDocDefinition = (data) => {
       {
         text: [
           'This Scope of Work Agreement ("Agreement") is entered into as of ',
-          { text: date_1 || '___________', decoration: 'underline' },
-          ' by and between:',
+          { text: date_1 || BLANK_SHORT, decoration: 'underline' },
+          ' by and between: ',
+          { text: business_name || BLANK_PARTY, decoration: 'underline' },
+          ' ("Client")',
         ],
         style: 'body', margin: [0, 0, 0, 6]
       },
 
       {
         text: [
-          '("Client") with a principal place of business at ',
-          { text: full_address || '___________', decoration: 'underline' },
+          'with a principal place of business at ',
+          { text: full_address || BLANK_ADDRESS, decoration: 'underline' },
           ' and SIINGE STUDIO, with a principal place of business at 7080 W. 20th Ave. #108 Lakewood, CO 80214 USA ("Studio").',
         ],
         style: 'body', margin: [0, 0, 0, 4]
@@ -141,52 +151,59 @@ const buildDocDefinition = (data) => {
       { text: '18. GOVERNING LAW', style: 'sectionHeader' },
       { text: 'This Agreement shall be governed by the laws of the State of Colorado.', style: 'body', margin: [0, 0, 0, 20] },
 
-      { text: 'SIGNATURES', style: 'sectionHeader', margin: [0, 0, 0, 6] },
-      { text: 'IN WITNESS WHEREOF, the Parties have executed this Agreement as of the Effective Date written above.', style: 'body', margin: [0, 0, 0, 16] },
-
+      // unbreakable keeps the whole signature block on one page: editing the deliverables
+      // above shifts this block around, and it must never land across a page break.
       {
-        columns: [
+        unbreakable: true,
+        stack: [
+          { text: 'SIGNATURES', style: 'sectionHeader', margin: [0, 0, 0, 6] },
+          { text: 'IN WITNESS WHEREOF, the Parties have executed this Agreement as of the Effective Date written above.', style: 'body', margin: [0, 0, 0, 12] },
+
           {
-            width: '50%',
-            stack: [
-              { text: 'CLIENT', style: 'sigLabel' },
-              { text: 'BUSINESS NAME', style: 'sigFieldLabel' },
-              { text: business_name || ' ', style: 'sigFieldValue' },
-              hline(),
-              { text: 'CLIENT NAME:', style: 'sigFieldLabel' },
-              { text: client_name || ' ', style: 'sigFieldValue' },
-              hline(),
-              { text: 'TITLE:', style: 'sigFieldLabel' },
-              { text: client_title || ' ', style: 'sigFieldValue' },
-              hline(),
-              { text: 'SIGNATURE:', style: 'sigFieldLabel' },
-              signatureImageBase64
-                ? { image: `data:image/png;base64,${signatureImageBase64}`, width: 110, height: 45, margin: [0, 4, 0, 4] }
-                : { text: ' ', margin: [0, 0, 0, 45] },
-              hline(),
-              { text: 'DATE:', style: 'sigFieldLabel' },
-              { text: date_2 || ' ', style: 'sigFieldValue' },
-              hline(),
-            ]
-          },
-          {
-            width: '50%',
-            stack: [
-              { text: 'STUDIO', style: 'sigLabel' },
-              { text: 'SIINGE STUDIO', fontSize: 11, margin: [0, 0, 0, 2] },
-              { text: 'SIERRA WHITE, FOUNDER', fontSize: 11, margin: [0, 0, 0, 12] },
-              { text: 'SIGNATURE:', style: 'sigFieldLabel' },
-              studioSignatureBase64
-                ? { image: `data:image/png;base64,${studioSignatureBase64}`, width: 110, height: 45, margin: [0, 4, 0, 4] }
-                : { text: ' ', margin: [0, 0, 0, 45] },
-              hline(),
-              { text: 'DATE:', style: 'sigFieldLabel' },
-              { text: date_3 || ' ', style: 'sigFieldValue' },
-              hline(),
-            ]
+            columns: [
+              {
+                width: '50%',
+                stack: [
+                  { text: 'CLIENT', style: 'sigLabel' },
+                  { text: 'BUSINESS NAME', style: 'sigFieldLabel' },
+                  { text: business_name || ' ', style: 'sigFieldValue' },
+                  hline(),
+                  { text: 'CLIENT NAME:', style: 'sigFieldLabel' },
+                  { text: client_name || ' ', style: 'sigFieldValue' },
+                  hline(),
+                  { text: 'TITLE:', style: 'sigFieldLabel' },
+                  { text: client_title || ' ', style: 'sigFieldValue' },
+                  hline(),
+                  { text: 'SIGNATURE:', style: 'sigFieldLabel' },
+                  signatureImageBase64
+                    ? { image: `data:image/png;base64,${signatureImageBase64}`, width: 110, height: 40, margin: [0, 2, 0, 2] }
+                    : { text: ' ', margin: [0, 0, 0, 28] },
+                  hline(),
+                  { text: 'DATE:', style: 'sigFieldLabel' },
+                  { text: date_2 || ' ', style: 'sigFieldValue' },
+                  hline(),
+                ]
+              },
+              {
+                width: '50%',
+                stack: [
+                  { text: 'STUDIO', style: 'sigLabel' },
+                  { text: 'SIINGE STUDIO', fontSize: 11, margin: [0, 0, 0, 2] },
+                  { text: 'SIERRA WHITE, FOUNDER', fontSize: 11, margin: [0, 0, 0, 8] },
+                  { text: 'SIGNATURE:', style: 'sigFieldLabel' },
+                  studioSignatureBase64
+                    ? { image: `data:image/png;base64,${studioSignatureBase64}`, width: 110, height: 40, margin: [0, 2, 0, 2] }
+                    : { text: ' ', margin: [0, 0, 0, 28] },
+                  hline(),
+                  { text: 'DATE:', style: 'sigFieldLabel' },
+                  { text: date_3 || ' ', style: 'sigFieldValue' },
+                  hline(),
+                ]
+              }
+            ],
+            columnGap: 30
           }
-        ],
-        columnGap: 30
+        ]
       }
     ]
   }
