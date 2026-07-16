@@ -6,7 +6,19 @@
 
       <div class="p-6 border-b flex justify-between items-start" style="background: var(--paper-2); border-color: var(--bone-edge);">
         <div>
-          <h2 style="font-family: var(--font-display); font-style: italic; font-weight: 400; font-size: 22px; color: var(--ink); margin: 0 0 8px; letter-spacing: -0.02em;">{{ project?.title || 'Project Detail' }}</h2>
+          <input
+            v-if="project?.id"
+            v-model="localEdits.title"
+            @blur="saveProjectTitle"
+            @keyup.enter="e => e.target.blur()"
+            @keyup.escape="e => (localEdits.title = project?.title || '', e.target.blur())"
+            title="Click to rename this project"
+            style="font-family: var(--font-display); font-style: italic; font-weight: 400; font-size: 22px; color: var(--ink); margin: 0 0 8px; letter-spacing: -0.02em; width: 100%; background: transparent; border: none; border-bottom: 1px solid transparent; outline: none; padding: 0; transition: border-color 120ms;"
+            @focus="e => e.target.style.borderBottomColor = 'var(--ink-5)'"
+            @mouseenter="e => { if (e.target !== document.activeElement) e.target.style.borderBottomColor = 'var(--bone-edge)' }"
+            @mouseleave="e => { if (e.target !== document.activeElement) e.target.style.borderBottomColor = 'transparent' }"
+          />
+          <h2 v-else style="font-family: var(--font-display); font-style: italic; font-weight: 400; font-size: 22px; color: var(--ink); margin: 0 0 8px; letter-spacing: -0.02em;">{{ project?.title || 'Project Detail' }}</h2>
           <div class="flex items-center gap-2">
             <p style="font-size: 13px; font-weight: 600; color: var(--ink-2);">{{ project?.client?.name || 'Unknown Client' }}</p>
             <span v-if="project?.client?.client_tier" :style="getTierChipStyle(project.client.client_tier)">
@@ -925,6 +937,7 @@ const productDevelopmentDueFields = [
 const buildLocalEdits = (p) => {
   const c = p?.client || {}
   return {
+    title: p?.title || '',
     pipeline_stage: p?.pipeline_stage || '',
     proposal_value: p?.proposal_value || null,
     internal_notes: p?.internal_notes || '',
@@ -1436,6 +1449,29 @@ const saveSowSection = async () => {
     await showAlert('Error saving SOW: ' + (e.message || e), 'Save Failed')
   } finally {
     isSaving.value = false
+  }
+}
+
+// Renaming from the header saves on blur/Enter — it's outside the tabs, so it doesn't
+// belong to the Overview form's Save button.
+const saveProjectTitle = async () => {
+  if (!props.project?.id) return
+  const title = (localEdits.value.title || '').trim()
+  if (!title) {
+    localEdits.value.title = props.project.title || '' // a project can't be left unnamed
+    return
+  }
+  if (title === props.project.title) return
+
+  try {
+    const { error } = await supabase.from('projects').update({ title }).eq('id', props.project.id)
+    if (error) throw error
+    localEdits.value.title = title
+    flashSaved()
+    emit('updated')
+  } catch (e) {
+    localEdits.value.title = props.project.title || ''
+    await showAlert('Error renaming the project: ' + (e.message || e), 'Save Failed')
   }
 }
 
