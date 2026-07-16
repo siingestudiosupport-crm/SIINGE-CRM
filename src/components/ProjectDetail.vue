@@ -465,10 +465,43 @@
                 class="w-full bg-blue-600 text-white py-3.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
                 Save & Prepare Dispatch
               </button>
+              <button @click="downloadDocs" :disabled="selectedDocs.length === 0 || isDownloading"
+                class="w-full mt-3 bg-white text-blue-700 border-2 border-blue-200 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:border-blue-400 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                {{ isDownloading ? 'Generating…' : 'Save & Download PDFs' }}
+              </button>
+              <p class="text-[11px] text-blue-500 font-bold mt-2 px-1">Downloads the documents signed and dated, to send them yourself. Doesn't mark them as sent.</p>
             </div>
 
             <div v-if="availableDocs.length === 0" class="p-5 bg-gray-50 border border-gray-200 rounded-2xl text-center text-sm text-gray-500 font-medium">
               All documents have been dispatched. View status in the Contracts Log tab.
+            </div>
+
+            <!-- Documents signed outside the portal (downloaded, signed by hand and returned) -->
+            <div v-if="project?.client?.nda_status !== 'Signed' || (project?.id && project?.sow_status !== 'Signed')"
+              style="padding: 16px; border: 1px solid var(--bone-edge); border-radius: 4px; background: var(--bone);">
+              <h3 style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: var(--ink-2); margin: 0 0 6px;">Signed Outside the Portal</h3>
+              <p style="font-size: 11px; color: var(--ink-4); margin: 0 0 12px; font-style: italic;">If the client returned a signed copy by email or in person, enter the date they signed it.</p>
+
+              <div v-for="doc in ['NDA', 'SOW']" :key="doc">
+                <div v-if="doc === 'NDA' ? project?.client?.nda_status !== 'Signed' : (project?.id && project?.sow_status !== 'Signed')"
+                  class="flex items-center gap-3" style="margin-bottom: 8px;">
+                  <span style="font-size: 11px; font-weight: 700; color: var(--ink-3); width: 34px;">{{ doc }}</span>
+                  <input
+                    v-model="localEdits[doc === 'NDA' ? 'manual_nda_signed_date' : 'manual_sow_signed_date']"
+                    type="date"
+                    :max="new Date().toISOString().substring(0, 10)"
+                    style="flex: 1; padding: 8px 12px; border: 1px solid var(--ink-5); border-radius: 2px; font-family: var(--font-sans); font-size: 13px; color: var(--ink); background: var(--paper); outline: none;"
+                    @focus="e => e.target.style.borderColor = 'var(--ink)'"
+                    @blur="e => e.target.style.borderColor = 'var(--ink-5)'"
+                  />
+                  <button
+                    @click="markDocSignedManually(doc)"
+                    :disabled="!localEdits[doc === 'NDA' ? 'manual_nda_signed_date' : 'manual_sow_signed_date']"
+                    style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 16px; background: var(--ink); color: var(--paper); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer; transition: opacity 120ms; white-space: nowrap;"
+                    :style="!localEdits[doc === 'NDA' ? 'manual_nda_signed_date' : 'manual_sow_signed_date'] ? 'opacity: 0.4; cursor: not-allowed;' : ''"
+                  >Mark as Signed</button>
+                </div>
+              </div>
             </div>
 
             <!-- Reset contracts -->
@@ -731,6 +764,9 @@
           <button @click="closeSowPreview()" style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 20px; background: transparent; color: var(--ink); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer;">
             Back to Edit
           </button>
+          <button @click="downloadDocs" :disabled="isDownloading" style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 20px; background: transparent; color: var(--ink); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer;" :style="isDownloading ? 'opacity: 0.5; cursor: not-allowed;' : ''">
+            {{ isDownloading ? 'Generating…' : 'Download PDFs' }}
+          </button>
           <button @click="continueFromSowPreview" :disabled="isSaving" style="font-family: var(--font-sans); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; padding: 9px 24px; background: var(--ink); color: var(--paper); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer; transition: opacity 120ms;" :style="isSaving ? 'opacity: 0.5; cursor:not-allowed;' : ''">
             {{ isSaving ? 'Saving...' : 'Continue to Dispatch' }}
           </button>
@@ -771,6 +807,7 @@ import { useConfirmModal } from '../composables/useConfirmModal'
 import { PDFDocument, StandardFonts, rgb, PDFRef } from 'pdf-lib'
 import html2pdf from 'html2pdf.js'
 import { generateSOWHTML } from '../utils/sowTemplate'
+import { getSOWPdfBlob } from '../utils/sowPdfmake'
 import { createPortalToken, generatePortalLink } from '../utils/portalTokens'
 
 const props = defineProps({
@@ -802,6 +839,7 @@ const flashSaved = () => {
 const selectedDocs = ref(/** @type {string[]} */ ([]))
 const emailData = ref({ to: '', cc: '', subject: '', messageText: '', buttonsHtml: '' })
 const showSowPreviewModal = ref(false)
+const isDownloading = ref(false)
 const pdfPreviewUrl = ref('')
 const isGeneratingSowPreview = ref(false)
 const pdfPreviewError = ref('')
@@ -906,6 +944,8 @@ const buildLocalEdits = (p) => {
     loss_reason_notes: p?.loss_reason_notes || '',
     snooze_until: p?.snooze_until ? p.snooze_until.substring(0, 10) : '',
     manual_sow_date: '',
+    manual_nda_signed_date: '',
+    manual_sow_signed_date: '',
     deliverable_trend_analysis: p?.deliverable_trend_analysis || false,
     deliverable_trend_analysis_due: p?.deliverable_trend_analysis_due || '',
     deliverable_design: p?.deliverable_design || false,
@@ -1321,6 +1361,67 @@ const generateSowPdfPreview = async () => {
   }
 }
 
+const triggerDownload = (blob, filename) => {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+// Downloads the selected documents so they can be sent by hand instead of through the portal.
+// Both go out already signed by the studio and dated today; the client only fills in their own block.
+const downloadDocs = async () => {
+  if (!props.project?.client) return
+  isDownloading.value = true
+  try {
+    if (selectedDocs.value.includes('SOW')) await saveSowContent()
+
+    const today = formatPdfDate(new Date().toISOString())
+    const safeName = (props.project.client.company || props.project.client.name || 'Client').replace(/[^a-z0-9]/gi, '_')
+
+    if (selectedDocs.value.includes('SOW')) {
+      const studioSignatureBase64 = await fetchBase64('/signature.png').catch(() => null)
+      const blob = await getSOWPdfBlob({
+        date_1: today,
+        date_2: '', // client's signing date, left for them to fill in
+        date_3: today,
+        full_address: props.project.client.full_address || '',
+        business_name: props.project.client.business_name || props.project.client.company || '',
+        client_name: props.project.client.name || '',
+        client_title: props.project.client.title || '',
+        deliverables: localEdits.value.sow_deliverables,
+        timeline: localEdits.value.sow_timeline,
+        fees_payment: localEdits.value.sow_fees_payment,
+        signatureImageBase64: null, // the client signs this one by hand
+        studioSignatureBase64,
+      })
+      triggerDownload(blob, `SOW_${safeName}.pdf`)
+    }
+
+    if (selectedDocs.value.includes('NDA')) {
+      // Sierra's signature is already printed on the template, so only the dates are filled.
+      // Left unflattened on purpose: the client fills and signs the form in their PDF reader.
+      const pdfDoc = await PDFDocument.load(await fetch('/mutual_nda.pdf').then(r => r.arrayBuffer()))
+      const pdfForm = pdfDoc.getForm()
+      for (const field of ['date_1', 'date_3']) {
+        try { pdfForm.getTextField(field).setText(today) } catch (e) { console.warn('NDA field not found:', field) }
+      }
+      const bytes = await pdfDoc.save()
+      triggerDownload(new Blob([bytes], { type: 'application/pdf' }), `NDA_${safeName}.pdf`)
+    }
+
+    emit('updated')
+  } catch (e) {
+    await showAlert('Error generating the PDF: ' + (e.message || e), 'Download Failed')
+  } finally {
+    isDownloading.value = false
+  }
+}
+
 const saveSowSection = async () => {
   if (!props.project?.id) return
   isSaving.value = true
@@ -1665,6 +1766,44 @@ const markSowSentManually = async () => {
     emit('updated')
   } catch (e) {
     await showAlert('Error: ' + e.message, 'Error')
+  }
+}
+
+// For documents signed outside the portal (downloaded, signed by hand and returned).
+// There is no signature image to store — only the status and the date get recorded.
+const markDocSignedManually = async (type) => {
+  const field = type === 'NDA' ? 'manual_nda_signed_date' : 'manual_sow_signed_date'
+  const dateInput = localEdits.value[field]
+  if (!dateInput || !props.project?.client_id) return
+  const signedDate = new Date(dateInput).toISOString()
+
+  try {
+    if (type === 'NDA') {
+      const { error } = await supabase.from('clients')
+        .update({ nda_status: 'Signed', nda_signed_date: signedDate })
+        .eq('id', props.project.client_id)
+      if (error) throw error
+    } else if (props.project?.id) {
+      const { error } = await supabase.from('projects')
+        .update({ sow_status: 'Signed', sow_signed_date: signedDate })
+        .eq('id', props.project.id)
+      if (error) throw error
+    }
+
+    await supabase.from('activity_logs').insert({
+      event_type:    type.toLowerCase() + '_signed',
+      client_id:     props.project.client_id,
+      client_name:   props.project.client?.name || '',
+      project_id:    props.project.id || null,
+      project_title: props.project.title || null,
+      notes:         `${type} marked as signed manually on ${dateInput}`
+    })
+
+    localEdits.value[field] = ''
+    await showAlert(`${type} marked as signed. Follow-up reminders have been stopped.`, 'Done')
+    emit('updated')
+  } catch (e) {
+    await showAlert('Error: ' + (e.message || e), 'Error')
   }
 }
 
