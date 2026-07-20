@@ -109,15 +109,16 @@
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../lib/supabaseClient'
 
-const TRIGGER_ORDER = ['proposal_3d', 'proposal_7d', 'proposal_weekly', 'call_completed_24h', 'cold_30d', 'review_request', 'no_show']
+const TRIGGER_ORDER = ['proposal_3d', 'proposal_7d', 'proposal_weekly', 'call_completed_24h', 'cold_30d', 'review_request', 'post_project_30d', 'no_show']
 
 const TRIGGER_META = {
-  proposal_3d:         { label: 'Proposal Follow-up',   timing: '3 days after SOW sent',           color: 'var(--caution)' },
-  proposal_7d:         { label: 'Second Follow-up',     timing: '7 days after SOW sent, no reply', color: 'var(--ember)'   },
+  proposal_3d:         { label: 'Proposal Follow-up',   timing: "3 days in 'Proposal Sent'",        color: 'var(--caution)' },
+  proposal_7d:         { label: 'Second Follow-up',     timing: "7 days in 'Proposal Sent', no reply", color: 'var(--ember)' },
   proposal_weekly:     { label: 'Weekly Follow-up',     timing: 'Weekly until close or churn',     color: 'var(--ember)'   },
   call_completed_24h:  { label: 'Post-Call Nudge',      timing: '24h after strategy call',         color: 'var(--info)'    },
   cold_30d:            { label: 'Cold Re-engagement',   timing: '30 days of inactivity',           color: 'var(--ink-3)'   },
   review_request:      { label: 'Request Review',       timing: 'After project complete',          color: 'var(--positive)' },
+  post_project_30d:    { label: 'Post-Project Check-in', timing: '30 days after project complete',  color: 'var(--positive)' },
   no_show:             { label: 'No Show',              timing: 'Sent after a missed meeting',     color: 'var(--critical)' },
 }
 

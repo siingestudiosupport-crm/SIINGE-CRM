@@ -26,6 +26,20 @@
       </div>
     </div>
 
+    <!-- Search + filter toolbar -->
+    <div style="display: flex; align-items: center; gap: 12px; padding: 12px 24px; border-bottom: 1px solid var(--ink-5);">
+      <input
+        v-model="searchQuery"
+        type="search"
+        placeholder="Search by name, company, email or project…"
+        style="flex: 1; max-width: 360px; padding: 8px 12px; border: 1px solid var(--ink-5); border-radius: 2px; background: var(--paper); color: var(--ink); font-size: 13px; font-family: var(--font-sans);"
+      />
+      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-3);">
+        <input type="checkbox" v-model="activeOnly" style="width: 14px; height: 14px; accent-color: var(--ink);" />
+        Active only
+      </label>
+    </div>
+
     <div v-if="loading" class="p-8 text-center" style="color: var(--ink-4);">
       Loading clients...
     </div>
@@ -43,11 +57,11 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-if="clients.length === 0">
-            <td colspan="6" style="padding: 32px; text-align: center; color: var(--ink-4); font-size: 13px;">No clients registered yet.</td>
+          <tr v-if="visibleClients.length === 0">
+            <td colspan="6" style="padding: 32px; text-align: center; color: var(--ink-4); font-size: 13px;">{{ clients.length === 0 ? 'No clients registered yet.' : 'No clients match your search.' }}</td>
           </tr>
 
-          <tr v-for="client in clients" :key="client.id"
+          <tr v-for="client in visibleClients" :key="client.id"
               @click="openClientDetail(client)"
               style="border-bottom: 1px solid var(--ink-5); cursor: pointer; transition: background 100ms;"
               @mouseenter="e => e.currentTarget.style.background = 'var(--paper)'"
@@ -246,6 +260,7 @@
             <div style="display: flex; flex-direction: column; gap: 8px;">
 
               <div v-for="item in [
+                { label: 'Strategy Call (1 hour)', model: 'deliverable_strategy_call', dueField: 'deliverable_strategy_call_due' },
                 { label: 'Trend / Market Analysis', model: 'deliverable_trend_analysis', dueField: 'deliverable_trend_analysis_due' },
                 { label: 'Apparel Design', model: 'deliverable_design', dueField: 'deliverable_design_due' },
                 { label: 'Branding / Packaging Design', model: 'deliverable_branding', dueField: 'deliverable_branding_due' },
@@ -524,6 +539,33 @@ const withCurrent = (options, current) =>
 
 const clients = ref([])
 const loading = ref(true)
+const searchQuery = ref('')
+const activeOnly = ref(false)
+
+const activeCount = (c) => (c.projects || []).filter(
+  p => p.pipeline_stage !== 'Project Complete' && p.pipeline_stage !== 'Churn'
+).length
+const isChurned = (c) => c.pipeline_stage === 'Churn'
+
+const visibleClients = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  let list = clients.value
+  if (q) {
+    list = list.filter(c =>
+      (c.name || '').toLowerCase().includes(q) ||
+      (c.company || '').toLowerCase().includes(q) ||
+      (c.email || '').toLowerCase().includes(q) ||
+      (c.projects || []).some(p => (p.title || '').toLowerCase().includes(q))
+    )
+  }
+  if (activeOnly.value) list = list.filter(c => activeCount(c) > 0)
+  // churn al fondo; entre el resto, más proyectos activos primero; el orden
+  // por created_at del fetch se mantiene como desempate (sort estable).
+  return [...list].sort((a, b) => {
+    if (isChurned(a) !== isChurned(b)) return isChurned(a) ? 1 : -1
+    return activeCount(b) - activeCount(a)
+  })
+})
 const showModal = ref(false)
 const isSubmitting = ref(false)
 const editingId = ref(null)
@@ -745,11 +787,11 @@ const cardRefreshToken = ref(0)
 const showAddProjectModal = ref(false)
 const isSavingProject = ref(false)
 const targetClient = ref(null)
-const projectForm = ref({ title: '', amount_paid: null, amount_owed: null, milestones: '', deliverable_trend_analysis: false, deliverable_trend_analysis_due: '', deliverable_design: false, deliverable_design_due: '', deliverable_branding: false, deliverable_branding_due: '', deliverable_tech_pack: false, deliverable_tech_pack_due: '', deliverable_product_dev: false, deliverable_manu_quotes_due: '', deliverable_initial_sample_due: '', deliverable_approved_sample_due: '', deliverable_size_range_due: '', deliverable_bulk_due: '', deliverable_product_analysis: false, deliverable_product_analysis_due: '', deliverable_in_house_patternmaking: false, deliverable_in_house_patternmaking_due: '', deliverable_in_house_proto: false, deliverable_in_house_proto_due: '', deliverable_in_house_manufacturing: false, deliverable_in_house_manufacturing_due: '' })
+const projectForm = ref({ title: '', amount_paid: null, amount_owed: null, milestones: '', deliverable_strategy_call: false, deliverable_strategy_call_due: '', deliverable_trend_analysis: false, deliverable_trend_analysis_due: '', deliverable_design: false, deliverable_design_due: '', deliverable_branding: false, deliverable_branding_due: '', deliverable_tech_pack: false, deliverable_tech_pack_due: '', deliverable_product_dev: false, deliverable_manu_quotes_due: '', deliverable_initial_sample_due: '', deliverable_approved_sample_due: '', deliverable_size_range_due: '', deliverable_bulk_due: '', deliverable_product_analysis: false, deliverable_product_analysis_due: '', deliverable_in_house_patternmaking: false, deliverable_in_house_patternmaking_due: '', deliverable_in_house_proto: false, deliverable_in_house_proto_due: '', deliverable_in_house_manufacturing: false, deliverable_in_house_manufacturing_due: '' })
 
 const openAddProject = (client) => {
   targetClient.value = client
-  projectForm.value = { title: '', amount_paid: null, amount_owed: null, milestones: '', deliverable_trend_analysis: false, deliverable_trend_analysis_due: '', deliverable_design: false, deliverable_design_due: '', deliverable_branding: false, deliverable_branding_due: '', deliverable_tech_pack: false, deliverable_tech_pack_due: '', deliverable_product_dev: false, deliverable_manu_quotes_due: '', deliverable_initial_sample_due: '', deliverable_approved_sample_due: '', deliverable_size_range_due: '', deliverable_bulk_due: '', deliverable_product_analysis: false, deliverable_product_analysis_due: '', deliverable_in_house_patternmaking: false, deliverable_in_house_patternmaking_due: '', deliverable_in_house_proto: false, deliverable_in_house_proto_due: '', deliverable_in_house_manufacturing: false, deliverable_in_house_manufacturing_due: '' }
+  projectForm.value = { title: '', amount_paid: null, amount_owed: null, milestones: '', deliverable_strategy_call: false, deliverable_strategy_call_due: '', deliverable_trend_analysis: false, deliverable_trend_analysis_due: '', deliverable_design: false, deliverable_design_due: '', deliverable_branding: false, deliverable_branding_due: '', deliverable_tech_pack: false, deliverable_tech_pack_due: '', deliverable_product_dev: false, deliverable_manu_quotes_due: '', deliverable_initial_sample_due: '', deliverable_approved_sample_due: '', deliverable_size_range_due: '', deliverable_bulk_due: '', deliverable_product_analysis: false, deliverable_product_analysis_due: '', deliverable_in_house_patternmaking: false, deliverable_in_house_patternmaking_due: '', deliverable_in_house_proto: false, deliverable_in_house_proto_due: '', deliverable_in_house_manufacturing: false, deliverable_in_house_manufacturing_due: '' }
   showAddProjectModal.value = true
 }
 
@@ -764,6 +806,8 @@ const saveProject = async () => {
       amount_owed: projectForm.value.amount_owed || 0,
       proposal_value: (Number(projectForm.value.amount_paid) || 0) + (Number(projectForm.value.amount_owed) || 0),
       milestones: projectForm.value.milestones || null,
+      deliverable_strategy_call: projectForm.value.deliverable_strategy_call,
+      deliverable_strategy_call_due: projectForm.value.deliverable_strategy_call_due || null,
       deliverable_trend_analysis: projectForm.value.deliverable_trend_analysis,
       deliverable_trend_analysis_due: projectForm.value.deliverable_trend_analysis_due || null,
       deliverable_design: projectForm.value.deliverable_design,

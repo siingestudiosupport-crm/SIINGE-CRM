@@ -27,17 +27,43 @@ function isInternal(email) {
   return email.endsWith('@' + INTERNAL_DOMAIN) || INTERNAL_EMAILS.includes(email)
 }
 
-// Map the "Which stage of the design process are you in?" answer to the CRM's
-// brand_stage dropdown values. Falls back to the raw text if no match.
-function normalizeBrandStage(raw) {
+// The intake form's two questions are fixed-option selects; the chosen answer
+// appears verbatim in the email body. Match against these known option strings
+// (see client-crm/src/views/Clients.vue BRAND_STAGE_OPTIONS).
+export const CHALLENGE_OPTIONS = [
+  'Tech pack, specs, or development documentation',
+  'Sampling, fit, and factory execution support',
+  'Full product development from concept through production',
+  'Sourcing or manufacturer guidance',
+  'Brand Positioning and Product Design',
+]
+export const BRAND_STAGE_OPTIONS = [
+  'Pre-launch with capital allocated for product development',
+  'Generating sales with an early product line',
+  'Scaling with multiple collections or expanding distribution (DTC/retail)',
+  'Established brand investing in new product development or expansion',
+]
+
+// Which known option appears in the email text (i.e. the answer to a select).
+export function findOption(text, options) {
+  if (!text) return null
+  const l = String(text).toLowerCase()
+  return options.find(o => l.includes(o.toLowerCase())) || null
+}
+
+// Map a brand-stage answer to the CRM's dropdown value. Handles the 4 current
+// select options plus legacy free-text answers. Falls back to raw text.
+export function normalizeBrandStage(raw) {
   if (!raw) return null
   const l = raw.toLowerCase()
-  if (l.includes('no idea') || l.includes('have not launched') || l.includes("haven't launched") || l.includes('not launched'))
-    return 'Pre-launch with capital allocated for product development'
-  if (l.includes('already launched') || l.includes('not happy'))
-    return 'Generating sales with an early product line'
-  if (l.includes('successful') || l.includes('expand'))
-    return 'Established brand investing in new product development or expansion'
+  if (l.includes('pre-launch') || l.includes('prelaunch') || l.includes('not launched') || l.includes('no idea'))
+    return BRAND_STAGE_OPTIONS[0]
+  if (l.includes('generating sales') || l.includes('early product line') || l.includes('already launched'))
+    return BRAND_STAGE_OPTIONS[1]
+  if (l.includes('scaling') || l.includes('expanding distribution') || l.includes('multiple collections'))
+    return BRAND_STAGE_OPTIONS[2]
+  if (l.includes('established') || l.includes('expansion') || l.includes('successful'))
+    return BRAND_STAGE_OPTIONS[3]
   return raw
 }
 
@@ -107,7 +133,7 @@ function clientEmailFromAttendees(attendees) {
 }
 
 // Grab the text that sits between a question line and the next marker.
-function extractBetween(text, startRe, endRe) {
+export function extractBetween(text, startRe, endRe) {
   if (!text) return null
   const start = text.match(startRe)
   if (!start) return null
@@ -117,7 +143,7 @@ function extractBetween(text, startRe, endRe) {
   return segment.replace(/\s+/g, ' ').trim() || null
 }
 
-serve(async (req) => {
+const handler = async (req) => {
   try {
     if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
 
@@ -142,10 +168,12 @@ serve(async (req) => {
     if (!email) return new Response('No client email found', { status: 400 })
 
     const primary_issue = (payload.primary_issue || '').trim() ||
-      extractBetween(description, /challenges are you facing\?/i, /which stage of the design process/i)
+      findOption(description, CHALLENGE_OPTIONS) ||
+      extractBetween(description, /challenges are you facing\?/i, /(how would you|current stage of growth|which stage of the design process)|\n\s*\n|$/i)
 
     const brand_stage_raw = (payload.brand_stage || '').trim() ||
-      extractBetween(description, /which stage of the design process are you in\?/i, /\n\s*\n|you have been invited|join zoom|need to make changes|scheduled with motion|$/i)
+      findOption(description, BRAND_STAGE_OPTIONS) ||
+      extractBetween(description, /(current stage of growth|which stage of the design process)[^\n?]*\??/i, /\n\s*\n|you have been invited|join zoom|need to make changes|scheduled with motion|$/i)
 
     const meeting_link = (payload.meeting_link || '').trim() || (payload.location || '').trim() ||
       extractZoomLink(body || description)
@@ -201,4 +229,8 @@ serve(async (req) => {
     console.error('❌ motion-webhook error:', error.message)
     return new Response(error.message, { status: 400 })
   }
-})
+}
+
+// Only start the server when run directly, so parse_selfcheck.ts can import the
+// pure helpers above without booting the HTTP handler.
+if (import.meta.main) serve(handler)

@@ -187,6 +187,7 @@ const FOLLOWUP_LABELS = {
   call_completed_24h: 'Post-Call Nudge',
   cold_30d:           'Cold Re-engagement',
   review_request:     'Request Review',
+  post_project_30d:   'Post-Project Check-in',
 }
 
 const events = ref([])

@@ -238,6 +238,12 @@
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                 Join Meeting
               </a>
+              <button v-if="project.client" @click="startPostCallFollowup" :disabled="isQueuing24h"
+                class="mt-2 w-max inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border"
+                style="background: white; color: var(--ink); border-color: var(--ink-5);"
+                title="Queue a post-call follow-up due 24h from now (use when there's no meeting date to auto-trigger it).">
+                + 24h Follow-up
+              </button>
             </div>
             <div class="p-4 bg-gray-50 rounded-xl border border-gray-100 flex flex-col justify-center shadow-sm">
               <p class="text-[10px] font-bold text-gray-400 uppercase mb-1">Client Tier</p>
@@ -842,6 +848,7 @@ const showEmailModal = ref(false)
 const isSendingEmail = ref(false)
 const savedFlash = ref(false)
 const isSaving = ref(false)
+const isQueuing24h = ref(false)
 let savedFlashTimer = null
 const flashSaved = () => {
   savedFlash.value = true
@@ -914,6 +921,7 @@ const fetchHubStageDates = async () => {
 
 
 const deliverableItems = [
+  { label: 'Strategy Call (1 hour)',        model: 'deliverable_strategy_call', dueField: 'deliverable_strategy_call_due' },
   { label: 'Trend / Market Analysis',       model: 'deliverable_trend_analysis', dueField: 'deliverable_trend_analysis_due' },
   { label: 'Apparel Design',                model: 'deliverable_design', dueField: 'deliverable_design_due' },
   { label: 'Branding / Packaging Design',   model: 'deliverable_branding', dueField: 'deliverable_branding_due' },
@@ -959,6 +967,8 @@ const buildLocalEdits = (p) => {
     manual_sow_date: '',
     manual_nda_signed_date: '',
     manual_sow_signed_date: '',
+    deliverable_strategy_call: p?.deliverable_strategy_call || false,
+    deliverable_strategy_call_due: p?.deliverable_strategy_call_due || '',
     deliverable_trend_analysis: p?.deliverable_trend_analysis || false,
     deliverable_trend_analysis_due: p?.deliverable_trend_analysis_due || '',
     deliverable_design: p?.deliverable_design || false,
@@ -1197,6 +1207,8 @@ const updateOverview = async () => {
       scheduled_date: localEdits.value.scheduled_date || null,
       in_menu_hub: localEdits.value.in_menu_hub,
       review_requested: localEdits.value.review_requested,
+      deliverable_strategy_call: localEdits.value.deliverable_strategy_call,
+      deliverable_strategy_call_due: localEdits.value.deliverable_strategy_call_due || null,
       deliverable_design: localEdits.value.deliverable_design,
       deliverable_design_due: localEdits.value.deliverable_design_due || null,
       deliverable_tech_pack: localEdits.value.deliverable_tech_pack,
@@ -1223,23 +1235,41 @@ const updateOverview = async () => {
       deliverable_bulk_due: localEdits.value.deliverable_bulk_due || null,
       payment_records: localEdits.value.payment_records && localEdits.value.payment_records.length > 0 ? JSON.stringify(localEdits.value.payment_records) : null,
     }
+
+    const oldStage = props.project.pipeline_stage
+    const newStage = localEdits.value.pipeline_stage
+    // Stamp when the project enters 'Proposal Sent' so the follow-up cron can
+    // count 3/7 days from it (proposal_3d / proposal_7d).
+    if (newStage === 'Proposal Sent' && oldStage !== 'Proposal Sent') {
+      updates.proposal_sent_at = new Date().toISOString()
+    }
+
     const { error: updateErr } = await supabase.from('projects').update(updates).eq('id', props.project.id)
     if (updateErr) throw updateErr
 
-    // Add review request to follow-ups when moving to Project Complete or Request Review
-    const oldStage = props.project.pipeline_stage
-    const newStage = localEdits.value.pipeline_stage
+    // Queue follow-ups on completion: the immediate review request (existing)
+    // plus a 30-day upsell check-in (post_project_30d).
+    const queueBase = {
+      client_id: props.project.client_id,
+      client_name: props.project.client?.name || '',
+      client_email: props.project.client?.email || '',
+      project_id: props.project.id,
+      project_title: props.project.title || '',
+    }
     const shouldQueueReview = (newStage === 'Project Complete' && oldStage !== 'Project Complete') ||
                                (newStage === 'Request Review' && oldStage !== 'Request Review')
     if (shouldQueueReview) {
       await supabase.from('email_queue').insert({
-        client_id: props.project.client_id,
-        client_name: props.project.client?.name || '',
-        client_email: props.project.client?.email || '',
-        project_id: props.project.id,
-        project_title: props.project.title || '',
+        ...queueBase,
         trigger_type: 'review_request',
         due_at: new Date().toISOString(),
+      })
+    }
+    if (newStage === 'Project Complete' && oldStage !== 'Project Complete') {
+      await supabase.from('email_queue').insert({
+        ...queueBase,
+        trigger_type: 'post_project_30d',
+        due_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       })
     }
 
@@ -1418,11 +1448,13 @@ const downloadDocs = async () => {
     }
 
     if (selectedDocs.value.includes('NDA')) {
-      // Sierra's signature is already printed on the template, so only the dates are filled.
+      // Sierra's signature is already printed on the template, so only the dates are filled:
+      // date_1 is the agreement's effective date and date_2 is the studio's own Date line.
+      // date_3 belongs to the Client block — it stays blank for them to date their signature.
       // Left unflattened on purpose: the client fills and signs the form in their PDF reader.
       const pdfDoc = await PDFDocument.load(await fetch('/mutual_nda.pdf').then(r => r.arrayBuffer()))
       const pdfForm = pdfDoc.getForm()
-      for (const field of ['date_1', 'date_3']) {
+      for (const field of ['date_1', 'date_2']) {
         try { pdfForm.getTextField(field).setText(today) } catch (e) { console.warn('NDA field not found:', field) }
       }
       const bytes = await pdfDoc.save()
@@ -1782,6 +1814,43 @@ const updateSnooze = async () => {
     .update({ snooze_until: localEdits.value.snooze_until || null })
     .eq('id', props.project.id)
   emit('updated')
+}
+
+// Manually queue the post-call follow-up due 24h from now. Fallback for when the
+// client has no scheduled_date, so the cron's call_completed_24h scan never fires.
+const startPostCallFollowup = async () => {
+  const client = props.project?.client
+  if (!client?.id || isQueuing24h.value) return
+  isQueuing24h.value = true
+  try {
+    const { data: existing } = await supabase
+      .from('email_queue')
+      .select('id')
+      .eq('client_id', client.id)
+      .eq('trigger_type', 'call_completed_24h')
+      .is('completed_at', null)
+      .maybeSingle()
+    if (existing) {
+      await showAlert('A 24h follow-up is already queued for this client.', 'Already Queued')
+      return
+    }
+    const { error } = await supabase.from('email_queue').insert({
+      client_id:    client.id,
+      client_name:  client.name || '',
+      client_email: client.email || '',
+      project_id:   props.project?.id || null,
+      project_title: props.project?.title || '',
+      trigger_type: 'call_completed_24h',
+      due_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    })
+    if (error) throw error
+    await showAlert('Post-call follow-up queued — due in 24 hours.', 'Done')
+    emit('updated')
+  } catch (e) {
+    await showAlert('Error: ' + (e.message || e), 'Error')
+  } finally {
+    isQueuing24h.value = false
+  }
 }
 
 const markSowSentManually = async () => {

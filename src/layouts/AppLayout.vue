@@ -177,6 +177,7 @@ const TRIGGER_META = {
   call_completed_24h: { label: 'Post-Call Nudge',     color: 'var(--info)'     },
   cold_30d:           { label: 'Cold Re-engagement',  color: 'var(--ink-3)'    },
   review_request:     { label: 'Request Review',      color: 'var(--positive)' },
+  post_project_30d:   { label: 'Post-Project Check-in', color: 'var(--positive)' },
   no_show:            { label: 'No Show',             color: 'var(--critical)' },
 }
 
